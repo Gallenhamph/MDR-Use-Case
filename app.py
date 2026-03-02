@@ -3,6 +3,7 @@ import streamlit as st
 import io
 import re
 import textwrap
+import random
 from google import genai
 from fpdf import FPDF
 from pptx import Presentation
@@ -12,21 +13,49 @@ from prompts import SYSTEM_PERSONA, build_scenario_prompt, build_mdr_case_prompt
 class CyberScenarioGenerator:
     def __init__(self, api_key):
         self.api_key = api_key
+        # Initialize the Google GenAI Client
         if self.api_key and self.api_key != "YOUR_API_KEY_HERE":
             self.client = genai.Client(api_key=self.api_key)
         else:
             self.client = None
     
     def fetch_osint(self, vendor):
+        """Massive database of simulated, real-world threat intelligence mapping to specific vendors."""
         simulated_osint = {
-            "Fortinet": "Recent CVEs regarding SSL-VPN unauthorized execution.",
-            "Palo Alto": "Exploitation of unpatched PAN-OS vulnerabilities.",
-            "Cisco": "Vulnerabilities in AnyConnect allowing privilege escalation.",
-            "CrowdStrike": "Trends showing threat actors deploying custom loaders to bypass user-mode hooking.",
-            "Mimecast": "Rise in highly targeted QR code phishing (Quishing) campaigns bypassing standard URL filters.",
-            "Okta": "Increases in AiTM (Adversary-in-the-Middle) proxy attacks defeating standard MFA."
+            # --- FIREWALLS ---
+            "Fortinet": "Active exploitation of FortiOS SSL-VPN vulnerabilities by state-sponsored actors to deploy custom implants and bypass pre-authentication filters.",
+            "Palo Alto": "Rising trend of threat actors exploiting unpatched PAN-OS GlobalProtect interfaces to achieve unauthenticated remote code execution and establish persistent reverse shells.",
+            "Cisco": "Exploitation of AnyConnect and IOS XE zero-days, leading to privilege escalation and the deployment of malicious Lua-based web shells on edge appliances.",
+            "Check Point": "Targeted attacks exploiting Check Point Security Gateway vulnerabilities to extract Active Directory hashes and establish persistent VPN sessions.",
+            "SonicWall": "Continued exploitation of SMA 100 series appliances using credential stuffing and unpatched firmware to deploy ransomware directly into the DMZ.",
+            "WatchGuard": "Historical targeting by botnets modifying firmware to maintain long-term, stealthy persistence on edge devices.",
+            "Barracuda": "Sophisticated threat actors exploiting Email Security Gateway (ESG) zero-days to deploy data exfiltration malware and backdoors.",
+            "Juniper": "Exploitation of Junos OS J-Web vulnerabilities allowing unauthenticated attackers to upload arbitrary files and execute code as root.",
+            
+            # --- ENDPOINTS ---
+            "CrowdStrike": "Advanced adversaries increasingly utilizing custom bootloaders and kernel-level drivers (BYOVD - Bring Your Own Vulnerable Driver) to blind Falcon sensors and bypass user-mode hooking.",
+            "Microsoft Defender": "High reliance on 'Living off the Land' (LotL) techniques and obfuscated PowerShell scripts to evade standard Defender ASR rules and execute fileless malware.",
+            "SentinelOne": "Threat actors utilizing highly obfuscated, fragmented shellcode and direct syscalls to evade SentinelOne's behavioral AI engines.",
+            "Trend Micro": "Exploitation of legacy Apex One vulnerabilities and exploitation of exclusion lists to deploy ransomware payloads undetected.",
+            "Symantec": "Bypass of legacy signature-based protections using polymorphic malware families and living-off-the-land binaries (LOLBins).",
+            
+            # --- IDENTITY ---
+            "Okta": "Surge in highly sophisticated Adversary-in-the-Middle (AiTM) phishing kits (e.g., Evilginx2) capturing Okta session cookies and bypassing multi-factor authentication entirely.",
+            "Microsoft Entra ID (Azure AD)": "Widespread MFA fatigue (push bombing) attacks and illicit consent grants involving malicious OAuth applications to maintain persistent access to Microsoft 365 environments.",
+            "Cisco Duo": "Targeting of telephony-based authentication (SMS/Voice) via SIM swapping, alongside localized push-notification fatigue campaigns.",
+            
+            # --- EMAIL ---
+            "Mimecast": "Massive increase in Quishing (QR Code Phishing) and HTML smuggling campaigns that successfully bypass Mimecast's URL rewriting and attachment sandboxing.",
+            "Proofpoint": "Threat actors leveraging highly customized, evasive PDF documents containing embedded malicious links that bypass TAP (Targeted Attack Protection) analysis.",
+            
+            # --- CLOUD ---
+            "AWS": "Exploitation of overly permissive IAM roles via SSRF vulnerabilities on public-facing EC2 instances, leading to environment-wide administrative compromise.",
+            "Microsoft Azure": "Abuse of Azure Automation Runbooks and extraction of Managed Identity tokens to pivot laterally across the Azure environment.",
+            "GCP": "Targeting of exposed service account keys embedded in developer repositories to access Google Cloud Storage buckets and BigQuery datasets."
         }
-        return simulated_osint.get(vendor, f"General misconfigurations and unpatched internet-facing assets tied to {vendor}.")
+        
+        # If the vendor isn't in the list (e.g. "Other" or "Sophos" which we protect), return a safe generic string
+        return simulated_osint.get(vendor, "")
 
     def generate_recommendations(self, inputs):
         recs = []
@@ -81,6 +110,7 @@ class CyberScenarioGenerator:
         return recs
 
     def call_llm(self, prompt):
+        """Calls the Gemini API using gemini-2.5-flash"""
         if not self.client:
             return "⚠️ Error: Please enter a valid Gemini API Key in the application code or via Streamlit secrets."
             
@@ -145,7 +175,6 @@ def write_safe_text(pdf, text, font_family="helvetica"):
             pdf.ln(3)
 
 def draw_visual_timeline(pdf, timeline_text):
-    """Draws a graphical timeline down the left margin with circles and lines."""
     if not timeline_text: return
     
     draw_section_header(pdf, "Attack Timeline & MDR Intervention")
@@ -160,23 +189,19 @@ def draw_visual_timeline(pdf, timeline_text):
             
         timestamp, event = entry.split('|', 1)
         
-        # Prevent page breaks in the middle of drawing a node
         if pdf.get_y() > 250:
             pdf.add_page()
             
         start_y = pdf.get_y()
         
-        # Draw Node (Sophos Blue Circle)
         pdf.set_fill_color(0, 32, 96)
         pdf.ellipse(x=x_node - 2, y=start_y + 1, w=4, h=4, style='F')
         
-        # Print Timestamp
         pdf.set_x(x_text)
         pdf.set_font("helvetica", "B", 10)
         pdf.set_text_color(0, 32, 96)
         pdf.cell(w=0, h=6, txt=clean_text(timestamp.strip()), new_x="LMARGIN", new_y="NEXT")
         
-        # Print Event Description
         pdf.set_text_color(0, 0, 0)
         pdf.set_font("helvetica", "", 10)
         wrapped_event = textwrap.wrap(clean_text(event.strip()), width=85, break_long_words=True)
@@ -187,21 +212,17 @@ def draw_visual_timeline(pdf, timeline_text):
             
         end_y = pdf.get_y()
         
-        # Draw connecting vertical line to the next node
         if i < len(entries) - 1:
             pdf.set_draw_color(200, 200, 200)
             pdf.set_line_width(0.5)
-            # Line goes from bottom of current node to top of next node space
             pdf.line(x_node, start_y + 6, x_node, end_y + 2)
             
         pdf.ln(5)
 
 def create_pdf(inputs, scenario, recs, mdr_case):
-    # Extract timeline from narrative using regex
     timeline_match = re.search(r'\[TIMELINE_START\](.*?)\[TIMELINE_END\]', scenario, re.DOTALL)
     if timeline_match:
         timeline_text = timeline_match.group(1).strip()
-        # Remove the timeline from the main scenario string so we don't print it twice
         main_scenario = re.sub(r'\[TIMELINE_START\].*?\[TIMELINE_END\]', '', scenario, flags=re.DOTALL).strip()
     else:
         timeline_text = None
@@ -241,7 +262,6 @@ def create_pdf(inputs, scenario, recs, mdr_case):
     write_safe_text(pdf, clean_text(main_scenario))
     pdf.ln(6)
     
-    # Draw the visual graphical timeline if the LLM provided it
     if timeline_text:
         draw_visual_timeline(pdf, timeline_text)
         pdf.ln(6)
@@ -275,7 +295,6 @@ def create_pdf(inputs, scenario, recs, mdr_case):
     return bytes(pdf.output())
 
 def create_pptx(inputs, scenario, recs, mdr_case):
-    # Strip timeline tags for PPTX so they don't show up in the text
     scenario_clean = re.sub(r'\[TIMELINE_START\]', '\n--- Attack Timeline ---\n', scenario)
     scenario_clean = re.sub(r'\[TIMELINE_END\]', '', scenario_clean)
 
@@ -381,10 +400,39 @@ if generate_btn:
         "in_house_team": in_house_team, "physical_locations": physical_locations, "public_web_apps": public_web_apps
     }
     
+    attack_vectors = [
+        "Highly targeted spear-phishing campaign using a malicious PDF attachment (T1566.001)",
+        "Adversary-in-the-Middle (AiTM) proxy attack defeating standard MFA via a fake login page (T1556)",
+        "Voice Phishing (Vishing) the IT Helpdesk to fraudulently reset a user's MFA device (T1566.004)",
+        "Social engineering via LinkedIn/Slack delivering a malicious payload disguised as a resume (T1566.003)",
+        "Exploitation of a zero-day vulnerability in a public-facing web application (T1190)",
+        "Exploitation of an unpatched, legacy VPN appliance leading to internal access (T1133)",
+        "Password spraying attack against legacy authentication protocols lacking MFA enforcement (T1110.003)",
+        "Default credentials left active on an internet-facing IoT or edge network device (T1078.001)",
+        "Compromised third-party IT contractor / Supply Chain Compromise via remote access tools (T1195)",
+        "Malicious update pushed through a compromised third-party software vendor (T1195.002)",
+        "Lateral pivot into the network originating from a compromised trusted vendor's environment (T1199)",
+        "Compromised Cloud Infrastructure via hardcoded API keys accidentally leaked on GitHub (T1078.004)",
+        "Session hijacking via stolen browser cookies purchased on the dark web, bypassing MFA entirely (T1539)",
+        "Malicious insider abusing legitimate administrative privileges to disable security tooling (T1078.003)",
+        "Physical 'USB Drop' attack in the company parking lot leading to a reverse shell beacon (T1200)"
+    ]
+    
+    selected_vector = random.choice(attack_vectors)
+    
     with st.spinner("Analyzing estate and generating narrative with Gemini 2.5 Flash..."):
-        osint_data = f"{app_engine.fetch_osint(firewall)} {app_engine.fetch_osint(endpoint)}"
+        # Combine OSINT across ALL selected stack components for a massively enriched prompt
+        osint_list = [
+            app_engine.fetch_osint(endpoint),
+            app_engine.fetch_osint(firewall),
+            app_engine.fetch_osint(identity),
+            app_engine.fetch_osint(email),
+            app_engine.fetch_osint(cloud_env)
+        ]
+        # Filter out empty strings and join with spaces
+        osint_data = " ".join([x for x in osint_list if x])
         
-        narrative_prompt = build_scenario_prompt(client_inputs, osint_data)
+        narrative_prompt = build_scenario_prompt(client_inputs, osint_data, selected_vector)
         scenario = app_engine.call_llm(narrative_prompt)
         
         case_prompt = build_mdr_case_prompt(client_inputs, scenario)
@@ -394,7 +442,6 @@ if generate_btn:
         
     st.success("Analysis Complete!")
     
-    # Strip tags for the UI so the Streamlit dashboard remains clean
     ui_scenario = re.sub(r'\[TIMELINE_START\]', '\n#### Attack Timeline\n', scenario)
     ui_scenario = re.sub(r'\[TIMELINE_END\]', '', ui_scenario)
     
