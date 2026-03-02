@@ -3,6 +3,7 @@ import streamlit as st
 import io
 import re
 import random
+import textwrap
 from google import genai
 from fpdf import FPDF
 from pptx import Presentation
@@ -146,21 +147,41 @@ def draw_section_header(pdf, title):
 def clean_text(text):
     if not text: return ""
     text = text.replace('\xa0', ' ').replace('\t', ' ')
-    
-    text = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'\1 (\2)', text)
-    
-    text = text.replace('**', '').replace('*', '').replace('#', '')
     text = text.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
     text = text.replace('–', '-').replace('—', '-')
+    text = text.replace('### ', '').replace('## ', '').replace('# ', '') # Strip markdown headers
     text = text.encode('ascii', 'ignore').decode('ascii')
     return text.strip()
+
+def clean_pptx_text(text):
+    """Specific cleaner for PPTX to remove all Markdown syntaxes."""
+    text = clean_text(text)
+    # Convert [Text](URL) into "Text: URL" for presentation slides
+    text = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'\1: \2', text)
+    # Strip asterisks used for bold/italics
+    text = text.replace('**', '').replace('*', '')
+    return text.strip()
+
+def robust_multi_cell(pdf, w, h, txt, align="L", fill=False):
+    """A bulletproof wrapper that falls back to textwrap if FPDF crashes on long URLs/strings."""
+    try:
+        # We attempt to natively render [Link](URL) and **bold** using FPDF's markdown parser
+        # By doing this, FPDF hides the massive URLs behind short text, preventing width crashes.
+        pdf.multi_cell(w=w, h=h, txt=txt, align=align, markdown=True, fill=fill)
+    except Exception:
+        # FAILSAFE: If FPDF fails (usually FPDFException from width error), we manually strip the URL entirely and wrap safely
+        safe_txt = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'\1', txt).replace('**', '').replace('*', '')
+        wrap_width = 90 if w == 0 else int(w / 1.8) # Approximate max chars based on cell width
+        lines = textwrap.wrap(safe_txt, width=wrap_width)
+        for line in lines:
+            pdf.cell(w=w, h=h, txt=line, align=align, fill=fill, new_x="LMARGIN", new_y="NEXT")
 
 def write_safe_text(pdf, text, font_family="helvetica"):
     pdf.set_font(font_family, "", 10)
     paragraphs = text.split('\n')
     for paragraph in paragraphs:
         if paragraph.strip():
-            pdf.multi_cell(w=0, h=6, txt=paragraph, align="L")
+            robust_multi_cell(pdf, 0, 6, paragraph)
             pdf.ln(2) 
         else:
             pdf.ln(2)
@@ -198,7 +219,7 @@ def draw_visual_timeline(pdf, timeline_text):
         pdf.set_x(x_text)
         
         usable_width = 210 - x_text - 15 
-        pdf.multi_cell(w=usable_width, h=5, txt=clean_text(event.strip()), align="L")
+        robust_multi_cell(pdf, usable_width, 5, clean_text(event.strip()))
             
         end_y = pdf.get_y()
         
@@ -265,7 +286,7 @@ def create_pdf(inputs, scenario, recs, mdr_case):
     
     clean_mdr = clean_text(mdr_case)
     for line in clean_mdr.split('\n'):
-        pdf.multi_cell(w=0, h=5, txt=f" {line}", align="L", fill=True)
+        robust_multi_cell(pdf, 0, 5, f" {line}", fill=True)
             
     pdf.ln(6)
     
@@ -276,7 +297,7 @@ def create_pdf(inputs, scenario, recs, mdr_case):
             write_safe_text(pdf, clean_text(r))
         else:
             pdf.set_x(15)
-            pdf.multi_cell(w=0, h=6, txt=clean_text(r), align="L")
+            robust_multi_cell(pdf, 0, 6, clean_text(r))
             pdf.ln(2)
         
     return bytes(pdf.output())
@@ -287,6 +308,7 @@ def create_pptx(inputs, scenario, recs, mdr_case):
 
     prs = Presentation()
     
+    # Slide 1: Title
     title_slide_layout = prs.slide_layouts[0]
     slide = prs.slides.add_slide(title_slide_layout)
     title = slide.shapes.title
@@ -294,59 +316,71 @@ def create_pptx(inputs, scenario, recs, mdr_case):
     title.text = "Threat Modeling & MDR Assessment"
     subtitle.text = f"Prepared for: {inputs['customer_name']}\nPresented by: {inputs['consultant_name']}\n{inputs['industry']} Sector"
     
+    # Split Narrative into paragraphs for pagination
+    paragraphs = [p for p in scenario_clean.split('\n') if p.strip()]
+    
+    # Slide 2: Narrative Phase 1
     bullet_slide_layout = prs.slide_layouts[1]
     slide2 = prs.slides.add_slide(bullet_slide_layout)
-    shapes2 = slide2.shapes
-    title_shape2 = shapes2.title
-    body_shape2 = shapes2.placeholders[1]
-    title_shape2.text = "Attack Scenario & Solutions"
-    
-    tf2 = body_shape2.text_frame
+    slide2.shapes.title.text = "Attack Narrative - Phase 1"
+    tf2 = slide2.shapes.placeholders[1].text_frame
     tf2.word_wrap = True 
-    p = tf2.paragraphs[0]
-    p.text = clean_text(scenario_clean[:800]) + "..." 
-    p.font.size = Pt(14) 
+    tf2.clear()
     
+    for para in paragraphs[:2]:
+        p = tf2.add_paragraph()
+        p.text = clean_pptx_text(para)
+        p.font.size = Pt(14) 
+        p.space_after = Pt(10)
+        
+    # Slide 3: Narrative Phase 2
     slide3 = prs.slides.add_slide(bullet_slide_layout)
-    shapes3 = slide3.shapes
-    title_shape3 = shapes3.title
-    body_shape3 = shapes3.placeholders[1]
-    title_shape3.text = "Simulated MDR Investigation"
+    slide3.shapes.title.text = "Attack Narrative - Phase 2"
+    tf3 = slide3.shapes.placeholders[1].text_frame
+    tf3.word_wrap = True 
+    tf3.clear()
     
-    tf3 = body_shape3.text_frame
-    tf3.word_wrap = True
+    for para in paragraphs[2:5]:
+        p = tf3.add_paragraph()
+        p.text = clean_pptx_text(para)
+        p.font.size = Pt(14) 
+        p.space_after = Pt(10)
+    
+    # Slide 4: MDR Investigation
+    slide4 = prs.slides.add_slide(bullet_slide_layout)
+    slide4.shapes.title.text = "Simulated MDR Investigation"
+    tf4 = slide4.shapes.placeholders[1].text_frame
+    tf4.word_wrap = True
     
     analysis_match = re.search(r'//Analysis:(.*?)//Response Actions:', mdr_case, re.DOTALL)
     if analysis_match:
-        analysis_text = clean_text(analysis_match.group(1).strip())
+        analysis_text = clean_pptx_text(analysis_match.group(1).strip())
     else:
-        analysis_text = clean_text(mdr_case[:500]) + "..."
+        analysis_text = clean_pptx_text(mdr_case[:500]) + "..."
         
-    p2 = tf3.paragraphs[0]
-    p2.text = analysis_text
-    p2.font.size = Pt(14)
+    p4 = tf4.paragraphs[0]
+    p4.text = analysis_text
+    p4.font.size = Pt(14)
     
-    slide4 = prs.slides.add_slide(bullet_slide_layout)
-    shapes4 = slide4.shapes
-    title_shape4 = shapes4.title
-    body_shape4 = shapes4.placeholders[1]
-    title_shape4.text = "Testing & Advisory Recommendations"
-    
-    tf4 = body_shape4.text_frame
-    tf4.word_wrap = True
-    tf4.clear() 
+    # Slide 5: Recommendations
+    slide5 = prs.slides.add_slide(bullet_slide_layout)
+    slide5.shapes.title.text = "Testing & Advisory Recommendations"
+    tf5 = slide5.shapes.placeholders[1].text_frame
+    tf5.word_wrap = True
+    tf5.clear() 
     
     for r in recs:
-        p4 = tf4.add_paragraph()
+        p5 = tf5.add_paragraph()
         if r.startswith("🛡️") or r.startswith("⚙️"):
-            p4.text = clean_text(r)
-            p4.font.bold = True
-            p4.font.size = Pt(16)
-            p4.level = 0
+            p5.text = clean_pptx_text(r)
+            p5.font.bold = True
+            p5.font.size = Pt(16)
+            p5.level = 0
+            p5.space_before = Pt(10)
         else:
-            p4.text = clean_text(r).lstrip('•').strip()
-            p4.font.size = Pt(12)
-            p4.level = 1
+            p5.text = clean_pptx_text(r).lstrip('•').strip()
+            p5.font.size = Pt(12)
+            p5.level = 1
             
     pptx_stream = io.BytesIO()
     prs.save(pptx_stream)
