@@ -65,8 +65,6 @@ class CyberScenarioGenerator:
                 "Adversaries leveraging unpatched Forcepoint VPN client vulnerabilities to escalate privileges to SYSTEM on compromised endpoints.",
                 "Abuse of Forcepoint Web Security configurations to bypass DLP controls and exfiltrate compressed archives to unauthorized cloud storage."
             ],
-            
-            # --- ENDPOINTS ---
             "CrowdStrike": [
                 "Advanced adversaries increasingly utilizing custom bootloaders and kernel-level drivers (BYOVD - Bring Your Own Vulnerable Driver) to blind Falcon sensors (Reference: Elastic Security Labs BYOVD research).",
                 "Threat actors utilizing unmanaged devices on the local network to laterally move and disable Falcon services via stolen local admin credentials.",
@@ -98,8 +96,6 @@ class CyberScenarioGenerator:
                 "AI engine evasion via artificial payload padding and the inclusion of benign code segments to artificially lower the malicious confidence score.",
                 "Bypassing of Cylance hooks using unmapped memory execution and Heaven's Gate techniques."
             ],
-            
-            # --- IDENTITY ---
             "Okta": [
                 "Surge in highly sophisticated Adversary-in-the-Middle (AiTM) phishing kits (e.g., Evilginx2) capturing Okta session cookies and bypassing multi-factor authentication entirely (Reference: CISA Advisory AA23-320A).",
                 "Social engineering of IT Helpdesks (commonly used by Scattered Spider) to forcibly reset Okta MFA devices for targeted high-privilege users.",
@@ -119,8 +115,6 @@ class CyberScenarioGenerator:
                 "Exploitation of historic PingFederate vulnerabilities (e.g., CVE-2021-28111) to bypass multi-factor authentication.",
                 "SAML assertion forging attacks enabling threat actors to spoof identity claims across the internal network."
             ],
-            
-            # --- EMAIL ---
             "Mimecast": [
                 "Massive increase in Quishing (QR Code Phishing) and HTML smuggling campaigns that successfully bypass Mimecast's URL rewriting and attachment sandboxing (Reference: IBM X-Force Quishing Trends).",
                 "Weaponization of internal, trusted domains (Business Email Compromise) to distribute secondary payloads past Mimecast filtering.",
@@ -136,8 +130,6 @@ class CyberScenarioGenerator:
                 "Use of homoglyph domain spoofing and hijacked internal accounts to bypass standard Microsoft anti-spoofing and DMARC checks.",
                 "Distribution of malicious RPMSG (Restricted Permission Message) files that evade initial Microsoft scanning algorithms."
             ],
-            
-            # --- CLOUD ---
             "AWS": [
                 "Exploitation of overly permissive IAM roles via SSRF vulnerabilities on public-facing EC2 instances, leading to environment-wide administrative compromise.",
                 "Discovery and abuse of long-lived AWS Access Keys accidentally pushed to public GitHub repositories or left inside compromised developer environments.",
@@ -154,7 +146,6 @@ class CyberScenarioGenerator:
                 "Exploitation of overly permissive IAM bindings to establish persistence via hidden GCP service accounts."
             ]
         }
-        
         options = simulated_osint.get(vendor, [])
         if options:
             return random.choice(options)
@@ -265,6 +256,20 @@ def clean_pdf_text(text):
     text = text.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
     text = text.replace('–', '-').replace('—', '-')
     text = text.replace('### ', '').replace('## ', '').replace('# ', '') 
+    text = text.encode('ascii', 'ignore').decode('ascii')
+    return text.strip()
+
+def clean_mdr_text(text):
+    """Specifically strips all markdown links and code backticks for the Courier Case Log to guarantee perfect monospaced wrapping."""
+    if not text: return ""
+    text = text.replace('\xa0', ' ').replace('\t', ' ')
+    # Convert links from [Text](URL) to plain Text (URL)
+    text = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'\1 (\2)', text)
+    text = text.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
+    text = text.replace('–', '-').replace('—', '-')
+    text = text.replace('### ', '').replace('## ', '').replace('# ', '')
+    # Strip markdown emphasis and backticks that crash monospaced FPDF wrapping
+    text = text.replace('**', '').replace('*', '').replace('`', '')
     text = text.encode('ascii', 'ignore').decode('ascii')
     return text.strip()
 
@@ -397,9 +402,15 @@ def create_pdf(inputs, scenario, recs, mdr_case):
     pdf.set_font("courier", "", 9)
     pdf.set_fill_color(240, 248, 255) 
     
-    clean_mdr = clean_pdf_text(mdr_case)
+    # NEW: We strictly strip markdown and use python's textwrap to guarantee monospaced boundaries.
+    clean_mdr = clean_mdr_text(mdr_case)
     for line in clean_mdr.split('\n'):
-        robust_multi_cell(pdf, 0, 5, f" {line}", fill=True)
+        # 95 characters is exactly the math needed for 9pt Courier to fill 190mm on an A4 page.
+        wrapped_lines = textwrap.wrap(line, width=95, break_long_words=True)
+        if not wrapped_lines:
+            pdf.cell(w=0, h=5, txt="", new_x="LMARGIN", new_y="NEXT", fill=True)
+        for w_line in wrapped_lines:
+            pdf.cell(w=0, h=5, txt=f" {w_line}", align="L", fill=True, new_x="LMARGIN", new_y="NEXT")
             
     pdf.ln(6)
     
@@ -621,9 +632,7 @@ if generate_btn:
     st.session_state['client_inputs'] = client_inputs
     st.session_state['customer_name'] = customer_name
     
-    # Massively expanded initial access vector pool
     attack_vectors = [
-        # Phishing / Social Engineering
         "Highly targeted spear-phishing campaign using a malicious PDF attachment (T1566.001)",
         "Adversary-in-the-Middle (AiTM) proxy attack defeating standard MFA via a fake login page (T1556)",
         "Voice Phishing (Vishing) the IT Helpdesk to fraudulently reset a user's MFA device (T1566.004)",
@@ -631,29 +640,21 @@ if generate_btn:
         "Spear-phishing utilizing HTML Smuggling to deliver a malicious ISO archive bypassing email attachment filters (T1027.006)",
         "QR Code Phishing (Quishing) evading URL inspection by routing mobile devices to a credential harvesting proxy (T1566)",
         "Drive-by compromise via SEO poisoning (Malvertising) directing a user to a trojanized software installer (T1189)",
-        
-        # Perimeter / Edge Exploitation
         "Exploitation of a zero-day vulnerability in a public-facing web application (T1190)",
         "Exploitation of an unpatched, legacy VPN appliance leading to internal access (T1133)",
         "Password spraying attack against legacy authentication protocols lacking MFA enforcement (T1110.003)",
         "Default credentials left active on an internet-facing IoT or edge network device (T1078.001)",
         "Brute-force dictionary attack against an unintentionally exposed RDP jump server (T1110.001)",
-        
-        # Supply Chain / Third Party
         "Compromised third-party IT contractor / Supply Chain Compromise via remote access tools (T1195)",
         "Malicious update pushed through a compromised third-party software vendor (T1195.002)",
         "Lateral pivot into the network originating from a compromised trusted vendor's environment (T1199)",
         "Abuse of compromised Managed Service Provider (MSP) remote monitoring and management (RMM) tools (T1195)",
         "Supply chain compromise via malicious code injected into a trusted open-source NPM/PyPI library used by the internal dev team (T1195.001)",
-        
-        # Identity / Cloud
         "Compromised Cloud Infrastructure via hardcoded API keys accidentally leaked on GitHub (T1078.004)",
         "Session hijacking via stolen browser cookies purchased on the dark web, bypassing MFA entirely (T1539)",
         "MFA Fatigue (Push Bombing) attack against a senior executive's compromised credentials (T1621)",
         "Illicit consent grant via a malicious Microsoft 365 / Google Workspace OAuth application (T1528)",
         "Exploitation of a publicly exposed, misconfigured cloud storage bucket containing administrative credentials (T1078.004)",
-        
-        # Physical / Insider / BYOD
         "Malicious insider abusing legitimate administrative privileges to disable security tooling (T1078.003)",
         "Physical 'USB Drop' attack in the company parking lot leading to a reverse shell beacon (T1200)",
         "Initial access originating from a user's malware-infected personal BYOD device connecting to the corporate network (T1133)",
