@@ -2,17 +2,22 @@
 import streamlit as st
 import re
 import random
-from google import genai
+from openai import AzureOpenAI
 from data import ATTACK_VECTORS, SIMULATED_OSINT
 from prompts import SYSTEM_PERSONA, build_scenario_prompt, build_mdr_case_prompt
 from export import create_pdf, create_pptx
 
 # --- BACKEND LOGIC ---
 class CyberScenarioGenerator:
-    def __init__(self, api_key):
-        self.api_key = api_key
-        if self.api_key and self.api_key != "YOUR_API_KEY_HERE":
-            self.client = genai.Client(api_key=self.api_key)
+    def __init__(self, api_key, endpoint, deployment, api_version):
+        self.deployment = deployment
+        # Initialize the Azure OpenAI Client
+        if api_key and endpoint:
+            self.client = AzureOpenAI(
+                api_key=api_key,  
+                api_version=api_version,
+                azure_endpoint=endpoint
+            )
         else:
             self.client = None
     
@@ -76,29 +81,42 @@ class CyberScenarioGenerator:
 
     def call_llm(self, prompt):
         if not self.client:
-            return "⚠️ Error: Please enter a valid Gemini API Key in the application code or via Streamlit secrets."
+            return "⚠️ Error: Please enter valid Azure OpenAI credentials in secrets.toml."
+        
         try:
-            response = self.client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=f"{SYSTEM_PERSONA}\n\n{prompt}"
+            response = self.client.chat.completions.create(
+                model=self.deployment,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PERSONA},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7
             )
-            return response.text
+            return response.choices[0].message.content
         except Exception as e:
-            return f"⚠️ An error occurred while communicating with the Gemini API: {e}"
-
+            return f"⚠️ An error occurred while communicating with Azure OpenAI: {e}"
 
 # --- STREAMLIT FRONTEND ---
 st.set_page_config(page_title="MDR & Testing Scenario Generator", page_icon="🛡️", layout="wide")
 st.title("🛡️ MDR & Offensive Security Scenario Generator")
 st.markdown("Generate highly tailored cyberattack scenarios, complete with mock Sophos Central case logs.")
 
+# Fetch Azure Secrets
 try:
-    gemini_key = st.secrets["GEMINI_API_KEY"]
+    az_key = st.secrets["AZURE_OPENAI_API_KEY"]
+    az_endpoint = st.secrets["AZURE_OPENAI_ENDPOINT"]
+    az_deployment = st.secrets["AZURE_OPENAI_DEPLOYMENT"]
+    az_api_version = st.secrets.get("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
 except KeyError:
-    st.error("Missing API Key! Please add GEMINI_API_KEY to your .streamlit/secrets.toml file.")
-    gemini_key = None
+    st.error("Missing API Credentials! Check your secrets.toml file.")
+    az_key, az_endpoint, az_deployment, az_api_version = None, None, None, None
 
-app_engine = CyberScenarioGenerator(api_key=gemini_key)
+app_engine = CyberScenarioGenerator(
+    api_key=az_key, 
+    endpoint=az_endpoint, 
+    deployment=az_deployment, 
+    api_version=az_api_version
+)
 
 with st.sidebar:
     st.header("📋 Engagement Details")
@@ -148,7 +166,7 @@ if generate_btn:
     
     selected_vector = random.choice(ATTACK_VECTORS)
     
-    with st.spinner("Analyzing estate and generating narrative with Gemini 2.5 Flash..."):
+    with st.spinner("Analyzing estate and generating narrative with Azure OpenAI GPT-4o..."):
         osint_list = [
             app_engine.fetch_osint(endpoint),
             app_engine.fetch_osint(firewall),
