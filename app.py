@@ -7,7 +7,10 @@ import textwrap
 from google import genai
 from fpdf import FPDF
 from pptx import Presentation
-from pptx.util import Pt
+from pptx.util import Pt, Inches
+from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.shapes import MSO_CONNECTOR
 from prompts import SYSTEM_PERSONA, build_scenario_prompt, build_mdr_case_prompt
 
 # --- BACKEND LOGIC ---
@@ -21,29 +24,141 @@ class CyberScenarioGenerator:
     
     def fetch_osint(self, vendor):
         simulated_osint = {
-            "Fortinet": "Active exploitation of FortiOS SSL-VPN vulnerabilities (e.g., CVE-2023-27997, CVE-2024-21762) by state-sponsored actors to deploy custom implants and bypass pre-authentication filters.",
-            "Palo Alto": "Rising trend of threat actors exploiting unpatched PAN-OS GlobalProtect interfaces (e.g., CVE-2024-3400) to achieve unauthenticated remote code execution and establish persistent reverse shells.",
-            "Cisco": "Exploitation of AnyConnect and IOS XE zero-days (e.g., CVE-2023-20198), leading to privilege escalation and the deployment of malicious Lua-based web shells on edge appliances.",
-            "Check Point": "Targeted attacks exploiting Check Point Security Gateway vulnerabilities (e.g., CVE-2024-24919) to extract Active Directory hashes and establish persistent VPN sessions.",
-            "SonicWall": "Continued exploitation of SMA 100 series appliances (e.g., CVE-2021-20038) using credential stuffing and unpatched firmware to deploy ransomware directly into the DMZ.",
-            "WatchGuard": "Historical targeting by botnets exploiting unpatched privilege escalation flaws (e.g., CVE-2022-26318) to maintain long-term, stealthy persistence on edge devices.",
-            "Barracuda": "Sophisticated threat actors exploiting Email Security Gateway (ESG) zero-days (e.g., CVE-2023-2868) to deploy data exfiltration malware and backdoors.",
-            "Juniper": "Exploitation of Junos OS J-Web vulnerabilities (e.g., CVE-2023-36844) allowing unauthenticated attackers to upload arbitrary files and execute code as root.",
-            "CrowdStrike": "Advanced adversaries increasingly utilizing custom bootloaders and kernel-level drivers (BYOVD - Bring Your Own Vulnerable Driver) to blind Falcon sensors (Reference: Elastic Security Labs BYOVD research).",
-            "Microsoft Defender": "High reliance on 'Living off the Land' (LotL) techniques and obfuscated PowerShell scripts to evade standard Defender ASR rules and execute fileless malware.",
-            "SentinelOne": "Threat actors utilizing highly obfuscated, fragmented shellcode and direct syscalls to evade SentinelOne's behavioral AI engines.",
-            "Trend Micro": "Exploitation of legacy Apex One vulnerabilities (e.g., CVE-2022-40139) and exploitation of exclusion lists to deploy ransomware payloads undetected.",
-            "Symantec": "Bypass of legacy signature-based protections using polymorphic malware families and living-off-the-land binaries (LOLBins).",
-            "Okta": "Surge in highly sophisticated Adversary-in-the-Middle (AiTM) phishing kits capturing Okta session cookies and bypassing multi-factor authentication entirely (Reference: CISA Advisory AA23-320A).",
-            "Microsoft Entra ID (Azure AD)": "Widespread MFA fatigue (push bombing) attacks and illicit consent grants involving malicious OAuth applications to maintain persistent access to Microsoft 365 environments.",
-            "Cisco Duo": "Targeting of telephony-based authentication (SMS/Voice) via SIM swapping, alongside localized push-notification fatigue campaigns.",
-            "Mimecast": "Massive increase in Quishing (QR Code Phishing) and HTML smuggling campaigns that successfully bypass Mimecast's URL rewriting and attachment sandboxing (Reference: IBM X-Force Quishing Trends).",
-            "Proofpoint": "Threat actors leveraging highly customized, evasive PDF documents containing embedded malicious links that bypass TAP (Targeted Attack Protection) analysis.",
-            "AWS": "Exploitation of overly permissive IAM roles via SSRF vulnerabilities on public-facing EC2 instances, leading to environment-wide administrative compromise.",
-            "Microsoft Azure": "Abuse of Azure Automation Runbooks and extraction of Managed Identity tokens to pivot laterally across the Azure environment.",
-            "GCP": "Targeting of exposed service account keys embedded in developer repositories to access Google Cloud Storage buckets and BigQuery datasets."
+            "Fortinet": [
+                "Active exploitation of FortiOS SSL-VPN vulnerabilities (e.g., CVE-2023-27997, CVE-2024-21762) by state-sponsored actors to deploy custom implants and bypass pre-authentication filters.",
+                "Threat actors leveraging unpatched FortiGate devices (e.g., CVE-2022-42475) to establish persistent access via malicious firmware images.",
+                "Widespread automated scanning and exploitation of FortiClient EMS SQL injection flaws (e.g., CVE-2023-48788) for remote code execution."
+            ],
+            "Palo Alto": [
+                "Rising trend of threat actors exploiting unpatched PAN-OS GlobalProtect interfaces (e.g., CVE-2024-3400) to achieve unauthenticated remote code execution and establish persistent reverse shells.",
+                "Targeted attacks abusing Palo Alto Expedition vulnerabilities (e.g., CVE-2024-5910) to extract administrative credentials and pivot internally.",
+                "Exploitation of PAN-OS configuration vulnerabilities by APT groups to bypass authentication mechanisms and silently modify edge routing rules."
+            ],
+            "Cisco": [
+                "Exploitation of AnyConnect and IOS XE zero-days (e.g., CVE-2023-20198), leading to privilege escalation and the deployment of malicious Lua-based web shells on edge appliances.",
+                "Targeting of legacy Cisco ASA firewalls (e.g., CVE-2020-3259) to extract memory contents and valid VPN user credentials.",
+                "Abuse of Cisco Secure Client vulnerabilities allowing attackers to bypass client-side posture checks and establish rogue VPN tunnels."
+            ],
+            "Check Point": [
+                "Targeted attacks exploiting Check Point Security Gateway vulnerabilities (e.g., CVE-2024-24919) to extract Active Directory hashes and establish persistent VPN sessions.",
+                "Ransomware affiliates exploiting legacy Mobile Access software blades to drop web shells into the DMZ.",
+                "Privilege escalation attacks targeting Check Point Gaia OS to achieve root-level persistence prior to internal network pivoting."
+            ],
+            "SonicWall": [
+                "Continued exploitation of SMA 100 series appliances (e.g., CVE-2021-20038) using credential stuffing and unpatched firmware to deploy ransomware directly into the DMZ.",
+                "Exploitation of SonicOS access control vulnerabilities (e.g., CVE-2024-40766) allowing unauthorized users to modify firewall policies.",
+                "Targeted attacks against SonicWall GMS appliances to push malicious configuration updates to edge networks."
+            ],
+            "WatchGuard": [
+                "Historical targeting by botnets exploiting unpatched privilege escalation flaws (e.g., CVE-2022-26318) to maintain long-term, stealthy persistence on edge devices.",
+                "Exploitation of authentication bypass vulnerabilities in WatchGuard Firebox appliances to hijack active administrative sessions."
+            ],
+            "Barracuda": [
+                "Sophisticated threat actors exploiting Email Security Gateway (ESG) zero-days (e.g., CVE-2023-2868) to deploy data exfiltration malware and backdoors.",
+                "Attacks abusing misconfigured Barracuda Web Application Firewalls to tunnel C2 traffic directly through port 443."
+            ],
+            "Juniper": [
+                "Exploitation of Junos OS J-Web vulnerabilities (e.g., CVE-2023-36844) allowing unauthenticated attackers to upload arbitrary files and execute code as root.",
+                "Exploitation of SRX Series authentication bypass vulnerabilities (e.g., CVE-2024-21591) to gain full administrative control of the edge device."
+            ],
+            "Forcepoint": [
+                "Adversaries leveraging unpatched Forcepoint VPN client vulnerabilities to escalate privileges to SYSTEM on compromised endpoints.",
+                "Abuse of Forcepoint Web Security configurations to bypass DLP controls and exfiltrate compressed archives to unauthorized cloud storage."
+            ],
+            
+            # --- ENDPOINTS ---
+            "CrowdStrike": [
+                "Advanced adversaries increasingly utilizing custom bootloaders and kernel-level drivers (BYOVD - Bring Your Own Vulnerable Driver) to blind Falcon sensors (Reference: Elastic Security Labs BYOVD research).",
+                "Threat actors utilizing unmanaged devices on the local network to laterally move and disable Falcon services via stolen local admin credentials.",
+                "Process hollowing and direct syscalls specifically crafted to bypass user-mode API hooking used by the Falcon agent."
+            ],
+            "Microsoft Defender": [
+                "High reliance on 'Living off the Land' (LotL) techniques and obfuscated PowerShell scripts to evade standard Defender ASR rules and execute fileless malware.",
+                "Threat actors actively targeting and modifying Defender exclusion paths (e.g., via Add-MpPreference) using stolen administrative privileges.",
+                "Token theft techniques designed to bypass local LSA protections and extract credentials before Defender can intervene."
+            ],
+            "SentinelOne": [
+                "Threat actors utilizing highly obfuscated, fragmented shellcode and direct syscalls to evade SentinelOne's behavioral AI engines.",
+                "EDR blinding techniques involving forced safe mode reboots or manipulation of the boot configuration data to prevent the SentinelOne agent from loading.",
+                "Adversaries employing DLL side-loading alongside trusted, digitally signed applications to execute payloads beneath SentinelOne's detection thresholds."
+            ],
+            "Trend Micro": [
+                "Exploitation of legacy Apex One vulnerabilities (e.g., CVE-2022-40139) and exploitation of exclusion lists to deploy ransomware payloads undetected.",
+                "Targeting of unpatched Trend Micro endpoint agents to cause denial-of-service conditions prior to lateral movement."
+            ],
+            "Symantec": [
+                "Bypass of legacy signature-based protections using polymorphic malware families and living-off-the-land binaries (LOLBins).",
+                "Exploitation of memory-mapped file abuse to execute payloads undetected by Symantec Endpoint Protection's real-time scanning."
+            ],
+            "Trellix": [
+                "Evasion of Trellix Endpoint Security via complex process injection techniques and manipulation of trusted parent-child execution trees.",
+                "Rogue system detection evasion by spoofing MAC addresses and altering local endpoint firewall rules."
+            ],
+            "Blackberry Cylance": [
+                "AI engine evasion via artificial payload padding and the inclusion of benign code segments to artificially lower the malicious confidence score.",
+                "Bypassing of Cylance hooks using unmapped memory execution and Heaven's Gate techniques."
+            ],
+            
+            # --- IDENTITY ---
+            "Okta": [
+                "Surge in highly sophisticated Adversary-in-the-Middle (AiTM) phishing kits (e.g., Evilginx2) capturing Okta session cookies and bypassing multi-factor authentication entirely (Reference: CISA Advisory AA23-320A).",
+                "Social engineering of IT Helpdesks (commonly used by Scattered Spider) to forcibly reset Okta MFA devices for targeted high-privilege users.",
+                "Dark web purchasing of stolen Okta session tokens exfiltrated by Lumma or RedLine infostealer malware, allowing direct access without triggering an authentication prompt."
+            ],
+            "Microsoft Entra ID (Azure AD)": [
+                "Widespread MFA fatigue (push bombing) attacks combined with localized brute-forcing to gain initial access to Entra ID.",
+                "Illicit consent grants involving malicious OAuth applications designed to maintain persistent, hidden access to Microsoft 365 environments and mailboxes.",
+                "Pass-the-PRT (Primary Refresh Token) attacks allowing adversaries to bypass Conditional Access policies and access cloud resources from unmanaged devices."
+            ],
+            "Cisco Duo": [
+                "Targeting of telephony-based authentication (SMS/Voice) via SIM swapping, successfully bypassing Duo's secondary validation.",
+                "Localized push-notification fatigue campaigns deployed during off-hours (1:00 AM - 4:00 AM) to wear down user defenses.",
+                "Extraction and abuse of Duo integration secrets from compromised internal servers to forge successful authentication approvals."
+            ],
+            "Ping Identity": [
+                "Exploitation of historic PingFederate vulnerabilities (e.g., CVE-2021-28111) to bypass multi-factor authentication.",
+                "SAML assertion forging attacks enabling threat actors to spoof identity claims across the internal network."
+            ],
+            
+            # --- EMAIL ---
+            "Mimecast": [
+                "Massive increase in Quishing (QR Code Phishing) and HTML smuggling campaigns that successfully bypass Mimecast's URL rewriting and attachment sandboxing (Reference: IBM X-Force Quishing Trends).",
+                "Weaponization of internal, trusted domains (Business Email Compromise) to distribute secondary payloads past Mimecast filtering.",
+                "Use of encrypted, password-protected ZIP files where the password is included in a benign image attachment, evading Mimecast deep inspection."
+            ],
+            "Proofpoint": [
+                "Threat actors leveraging highly customized, evasive PDF documents containing embedded malicious links that bypass TAP (Targeted Attack Protection) analysis.",
+                "Phishing campaigns utilizing embedded CAPTCHAs inside attachments to prevent Proofpoint sandboxes from executing and analyzing the malicious code.",
+                "Delayed payload activation strategies where the malicious URL remains benign during Proofpoint delivery inspection, only turning malicious hours later."
+            ],
+            "Microsoft Defender for Office 365": [
+                "Bypass of SafeLinks and SafeAttachments using highly sophisticated open-redirect vulnerabilities hosted on legitimate services (e.g., Google, Adobe).",
+                "Use of homoglyph domain spoofing and hijacked internal accounts to bypass standard Microsoft anti-spoofing and DMARC checks.",
+                "Distribution of malicious RPMSG (Restricted Permission Message) files that evade initial Microsoft scanning algorithms."
+            ],
+            
+            # --- CLOUD ---
+            "AWS": [
+                "Exploitation of overly permissive IAM roles via SSRF vulnerabilities on public-facing EC2 instances, leading to environment-wide administrative compromise.",
+                "Discovery and abuse of long-lived AWS Access Keys accidentally pushed to public GitHub repositories or left inside compromised developer environments.",
+                "Targeting of misconfigured, publicly exposed S3 buckets and exploitation of weakly configured AWS Lambda functions for initial execution."
+            ],
+            "Microsoft Azure": [
+                "Abuse of Azure Automation Runbooks and extraction of Managed Identity tokens to pivot laterally across the Azure environment.",
+                "Privilege escalation to Global Administrator via compromised on-premises AD Connect servers synchronizing hybrid identities.",
+                "Targeting of unauthenticated Azure API endpoints exposing sensitive backend container configurations."
+            ],
+            "GCP": [
+                "Targeting of exposed service account keys embedded in developer repositories to access Google Cloud Storage buckets and BigQuery datasets.",
+                "Abuse of the Google Compute Engine metadata API from compromised container workloads to extract lateral movement credentials.",
+                "Exploitation of overly permissive IAM bindings to establish persistence via hidden GCP service accounts."
+            ]
         }
-        return simulated_osint.get(vendor, "")
+        
+        options = simulated_osint.get(vendor, [])
+        if options:
+            return random.choice(options)
+        return ""
 
     def generate_recommendations(self, inputs):
         recs = []
@@ -145,7 +260,6 @@ def draw_section_header(pdf, title):
     pdf.set_text_color(0, 0, 0)
 
 def clean_pdf_text(text):
-    """Prepares text for FPDF. Keeps ** and [text](url) intact for native markdown rendering. Strips headers."""
     if not text: return ""
     text = text.replace('\xa0', ' ').replace('\t', ' ')
     text = text.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
@@ -155,25 +269,20 @@ def clean_pdf_text(text):
     return text.strip()
 
 def clean_pptx_text(text):
-    """Prepares text for PPTX. Converts [Text](URL) into "Text: URL" and strips bold/italics markers."""
     if not text: return ""
     text = text.replace('\xa0', ' ').replace('\t', ' ')
     text = text.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
     text = text.replace('–', '-').replace('—', '-')
     text = text.replace('### ', '').replace('## ', '').replace('# ', '') 
-    # Convert [Text](URL) into "Text: URL"
     text = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'\1: \2', text)
-    # Strip asterisks
     text = text.replace('**', '').replace('*', '')
     text = text.encode('ascii', 'ignore').decode('ascii')
     return text.strip()
 
 def robust_multi_cell(pdf, w, h, txt, align="L", fill=False):
-    """A bulletproof FPDF wrapper. Parses Markdown links nicely so URLs hide behind text. Falls back to textwrap if it crashes."""
     try:
         pdf.multi_cell(w=w, h=h, txt=txt, align=align, markdown=True, fill=fill)
     except Exception:
-        # Failsafe: Strip markdown completely and forcefully split long words/URLs
         safe_txt = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'\1 (\2)', txt).replace('**', '').replace('*', '')
         wrap_width = 85 if w == 0 else int(w / 2.0) 
         lines = textwrap.wrap(safe_txt, width=wrap_width, break_long_words=True)
@@ -307,77 +416,144 @@ def create_pdf(inputs, scenario, recs, mdr_case):
     return bytes(pdf.output())
 
 def create_pptx(inputs, scenario, recs, mdr_case):
-    scenario_clean = re.sub(r'\[TIMELINE_START\]', '\n--- Attack Timeline ---\n', scenario)
-    scenario_clean = re.sub(r'\[TIMELINE_END\]', '', scenario_clean)
+    DARK_BLUE = RGBColor(0, 32, 96)
+    
+    timeline_match = re.search(r'\[TIMELINE_START\](.*?)\[TIMELINE_END\]', scenario, re.DOTALL)
+    if timeline_match:
+        timeline_text = timeline_match.group(1).strip()
+        main_scenario = re.sub(r'\[TIMELINE_START\].*?\[TIMELINE_END\]', '', scenario, flags=re.DOTALL).strip()
+    else:
+        timeline_text = None
+        main_scenario = scenario
 
     prs = Presentation()
     
     title_slide_layout = prs.slide_layouts[0]
-    slide = prs.slides.add_slide(title_slide_layout)
-    title = slide.shapes.title
-    subtitle = slide.placeholders[1]
+    slide1 = prs.slides.add_slide(title_slide_layout)
+    title = slide1.shapes.title
+    subtitle = slide1.placeholders[1]
     title.text = "Threat Modeling & MDR Assessment"
+    title.text_frame.paragraphs[0].font.color.rgb = DARK_BLUE
     subtitle.text = f"Prepared for: {inputs['customer_name']}\nPresented by: {inputs['consultant_name']}\n{inputs['industry']} Sector"
-    
-    paragraphs = [p for p in scenario_clean.split('\n') if p.strip()]
     
     bullet_slide_layout = prs.slide_layouts[1]
     slide2 = prs.slides.add_slide(bullet_slide_layout)
-    slide2.shapes.title.text = "Attack Narrative - Phase 1"
+    slide2.shapes.title.text = "Client Estate Overview"
+    slide2.shapes.title.text_frame.paragraphs[0].font.color.rgb = DARK_BLUE
     tf2 = slide2.shapes.placeholders[1].text_frame
-    tf2.word_wrap = True 
     tf2.clear()
     
-    for para in paragraphs[:2]:
+    details = [
+        f"Target Industry: {inputs['industry']}",
+        f"Total User Base: {inputs['users']} Users (Security Savviness: {inputs['savviness']})",
+        f"Infrastructure: {inputs['endpoints']} Endpoints | {inputs['servers']} Servers",
+        f"Crown Jewels: {inputs['critical_infra']}",
+        f"Internal Security Team: {inputs['in_house_team']}",
+        "Current Technology Stack:",
+        f"  • Endpoint: {inputs['endpoint']}",
+        f"  • Perimeter: {inputs['firewall']}",
+        f"  • Identity: {inputs['identity']}",
+        f"  • Email: {inputs['email']}",
+        f"  • M365/Cloud: {inputs['m365_license']} | {inputs['cloud_env']}"
+    ]
+    
+    for d in details:
         p = tf2.add_paragraph()
-        p.text = clean_pptx_text(para)
-        p.font.size = Pt(14) 
-        p.space_after = Pt(10)
-        
+        p.text = d
+        p.font.size = Pt(14)
+        if "Technology Stack:" in d:
+            p.font.bold = True
+            p.space_before = Pt(14)
+    
     slide3 = prs.slides.add_slide(bullet_slide_layout)
-    slide3.shapes.title.text = "Attack Narrative - Phase 2"
+    slide3.shapes.title.text = "Threat Narrative: Executive Summary"
+    slide3.shapes.title.text_frame.paragraphs[0].font.color.rgb = DARK_BLUE
     tf3 = slide3.shapes.placeholders[1].text_frame
     tf3.word_wrap = True 
     tf3.clear()
     
-    for para in paragraphs[2:5]:
+    paras = [p for p in main_scenario.split('\n') if p.strip()]
+    exec_summary = paras[:2] if len(paras) >= 2 else paras
+    
+    for para in exec_summary:
         p = tf3.add_paragraph()
         p.text = clean_pptx_text(para)
         p.font.size = Pt(14) 
-        p.space_after = Pt(10)
+        p.space_after = Pt(14)
     
-    slide4 = prs.slides.add_slide(bullet_slide_layout)
-    slide4.shapes.title.text = "Simulated MDR Investigation"
-    tf4 = slide4.shapes.placeholders[1].text_frame
-    tf4.word_wrap = True
-    
-    analysis_match = re.search(r'//Analysis:(.*?)//Response Actions:', mdr_case, re.DOTALL)
-    if analysis_match:
-        analysis_text = clean_pptx_text(analysis_match.group(1).strip())
-    else:
-        analysis_text = clean_pptx_text(mdr_case[:500]) + "..."
-        
-    p4 = tf4.paragraphs[0]
-    p4.text = analysis_text
-    p4.font.size = Pt(14)
-    
+    blank_slide_layout = prs.slide_layouts[5] 
+    slide4 = prs.slides.add_slide(blank_slide_layout)
+    slide4.shapes.title.text = "Attack Timeline & MDR Intervention"
+    slide4.shapes.title.text_frame.paragraphs[0].font.color.rgb = DARK_BLUE
+
+    if timeline_text:
+        entries = timeline_text.strip().split('\n')
+        x_node = Inches(0.8)
+        x_text = Inches(1.3)
+        y_offset = Inches(1.8) 
+        text_width = Inches(8.0)
+
+        for i, entry in enumerate(entries):
+            if '|' not in entry: continue
+            timestamp, event = entry.split('|', 1)
+
+            node = slide4.shapes.add_shape(MSO_SHAPE.OVAL, x_node, y_offset, Inches(0.2), Inches(0.2))
+            node.fill.solid()
+            node.fill.fore_color.rgb = DARK_BLUE
+            node.line.color.rgb = DARK_BLUE
+
+            txBox = slide4.shapes.add_textbox(x_text, y_offset - Inches(0.1), text_width, Inches(0.5))
+            tf = txBox.text_frame
+            tf.word_wrap = True
+
+            p1 = tf.paragraphs[0]
+            p1.text = clean_pptx_text(timestamp.strip())
+            p1.font.bold = True
+            p1.font.color.rgb = DARK_BLUE
+            p1.font.size = Pt(12)
+
+            p2 = tf.add_paragraph()
+            p2.text = clean_pptx_text(event.strip())
+            p2.font.size = Pt(12)
+
+            line_height = Inches(0.8)
+            if len(event) > 80: line_height = Inches(1.2)
+            if len(event) > 150: line_height = Inches(1.5)
+            
+            next_y_offset = y_offset + line_height
+
+            if i < len(entries) - 1:
+                connector = slide4.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, x_node + Inches(0.1), y_offset + Inches(0.2), x_node + Inches(0.1), next_y_offset)
+                connector.line.color.rgb = RGBColor(150, 150, 150)
+
+            y_offset = next_y_offset
+
     slide5 = prs.slides.add_slide(bullet_slide_layout)
-    slide5.shapes.title.text = "Testing & Advisory Recommendations"
+    slide5.shapes.title.text = "Security Advisory Summary"
+    slide5.shapes.title.text_frame.paragraphs[0].font.color.rgb = DARK_BLUE
     tf5 = slide5.shapes.placeholders[1].text_frame
     tf5.word_wrap = True
     tf5.clear() 
     
     for r in recs:
-        p5 = tf5.add_paragraph()
         if r.startswith("🛡️") or r.startswith("⚙️"):
+            p5 = tf5.add_paragraph()
             p5.text = clean_pptx_text(r)
             p5.font.bold = True
             p5.font.size = Pt(16)
+            p5.font.color.rgb = DARK_BLUE
             p5.level = 0
             p5.space_before = Pt(10)
         else:
-            p5.text = clean_pptx_text(r).lstrip('•').strip()
-            p5.font.size = Pt(12)
+            match = re.search(r'\[([^\]]+)\]', r)
+            if match:
+                short_name = match.group(1) 
+            else:
+                short_name = r.split(':')[0].replace('•', '').strip()
+                
+            p5 = tf5.add_paragraph()
+            p5.text = short_name
+            p5.font.size = Pt(14)
             p5.level = 1
             
     pptx_stream = io.BytesIO()
@@ -445,22 +621,43 @@ if generate_btn:
     st.session_state['client_inputs'] = client_inputs
     st.session_state['customer_name'] = customer_name
     
+    # Massively expanded initial access vector pool
     attack_vectors = [
+        # Phishing / Social Engineering
         "Highly targeted spear-phishing campaign using a malicious PDF attachment (T1566.001)",
         "Adversary-in-the-Middle (AiTM) proxy attack defeating standard MFA via a fake login page (T1556)",
         "Voice Phishing (Vishing) the IT Helpdesk to fraudulently reset a user's MFA device (T1566.004)",
         "Social engineering via LinkedIn/Slack delivering a malicious payload disguised as a resume (T1566.003)",
+        "Spear-phishing utilizing HTML Smuggling to deliver a malicious ISO archive bypassing email attachment filters (T1027.006)",
+        "QR Code Phishing (Quishing) evading URL inspection by routing mobile devices to a credential harvesting proxy (T1566)",
+        "Drive-by compromise via SEO poisoning (Malvertising) directing a user to a trojanized software installer (T1189)",
+        
+        # Perimeter / Edge Exploitation
         "Exploitation of a zero-day vulnerability in a public-facing web application (T1190)",
         "Exploitation of an unpatched, legacy VPN appliance leading to internal access (T1133)",
         "Password spraying attack against legacy authentication protocols lacking MFA enforcement (T1110.003)",
         "Default credentials left active on an internet-facing IoT or edge network device (T1078.001)",
+        "Brute-force dictionary attack against an unintentionally exposed RDP jump server (T1110.001)",
+        
+        # Supply Chain / Third Party
         "Compromised third-party IT contractor / Supply Chain Compromise via remote access tools (T1195)",
         "Malicious update pushed through a compromised third-party software vendor (T1195.002)",
         "Lateral pivot into the network originating from a compromised trusted vendor's environment (T1199)",
+        "Abuse of compromised Managed Service Provider (MSP) remote monitoring and management (RMM) tools (T1195)",
+        "Supply chain compromise via malicious code injected into a trusted open-source NPM/PyPI library used by the internal dev team (T1195.001)",
+        
+        # Identity / Cloud
         "Compromised Cloud Infrastructure via hardcoded API keys accidentally leaked on GitHub (T1078.004)",
         "Session hijacking via stolen browser cookies purchased on the dark web, bypassing MFA entirely (T1539)",
+        "MFA Fatigue (Push Bombing) attack against a senior executive's compromised credentials (T1621)",
+        "Illicit consent grant via a malicious Microsoft 365 / Google Workspace OAuth application (T1528)",
+        "Exploitation of a publicly exposed, misconfigured cloud storage bucket containing administrative credentials (T1078.004)",
+        
+        # Physical / Insider / BYOD
         "Malicious insider abusing legitimate administrative privileges to disable security tooling (T1078.003)",
-        "Physical 'USB Drop' attack in the company parking lot leading to a reverse shell beacon (T1200)"
+        "Physical 'USB Drop' attack in the company parking lot leading to a reverse shell beacon (T1200)",
+        "Initial access originating from a user's malware-infected personal BYOD device connecting to the corporate network (T1133)",
+        "Physical intrusion deploying a rogue hidden network implant (e.g., LAN Turtle) in a remote branch office (T1200)"
     ]
     
     selected_vector = random.choice(attack_vectors)
