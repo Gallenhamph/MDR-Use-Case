@@ -38,7 +38,8 @@ class ReportPDF(FPDF):
         self.set_y(6)
         self.set_font('helvetica', 'B', 12)
         self.set_text_color(255, 255, 255)
-        self.cell(0, 10, 'Threat Modeling & MDR Assessment', align='R')
+        # ADDED: new_x="RMARGIN", new_y="TOP" to suppress warnings
+        self.cell(0, 10, 'Threat Modeling & MDR Assessment', align='R', new_x="RMARGIN", new_y="TOP")
         self.set_y(25)
         self.set_text_color(0, 0, 0)
 
@@ -46,7 +47,8 @@ class ReportPDF(FPDF):
         self.set_y(-15)
         self.set_font('helvetica', 'I', 8)
         self.set_text_color(128, 128, 128)
-        self.cell(0, 10, f'Page {self.page_no()}', align='C')
+        # ADDED: new_x="RMARGIN", new_y="TOP" to suppress warnings
+        self.cell(0, 10, f'Page {self.page_no()}', align='C', new_x="RMARGIN", new_y="TOP")
 
 def draw_section_header(pdf, title):
     pdf.ln(5)
