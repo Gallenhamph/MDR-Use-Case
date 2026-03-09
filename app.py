@@ -21,7 +21,6 @@ class ScenarioReport(BaseModel):
 class CyberScenarioGenerator:
     def __init__(self, api_key, endpoint, deployment, api_version):
         self.deployment = deployment
-        # Initialize the Azure OpenAI Client
         if api_key and endpoint:
             self.client = AzureOpenAI(
                 api_key=api_key,  
@@ -89,7 +88,6 @@ class CyberScenarioGenerator:
 
         return recs
 
-    # Native Structured JSON API Call
     def call_llm_structured(self, prompt, response_model):
         if not self.client: return None
         try:
@@ -102,13 +100,11 @@ class CyberScenarioGenerator:
                 response_format=response_model,
                 temperature=0.7
             )
-            # Returns a strongly typed Python object based on Pydantic model
             return response.choices[0].message.parsed
         except Exception as e:
             st.error(f"Azure OpenAI Parsing Error: {e}")
             return None
 
-    # Standard Text API Call (used for the MDR log)
     def call_llm_text(self, prompt):
         if not self.client: return "⚠️ Error: Please enter valid Azure OpenAI credentials."
         try:
@@ -123,6 +119,33 @@ class CyberScenarioGenerator:
             return response.choices[0].message.content
         except Exception as e:
             return f"⚠️ An error occurred: {e}"
+
+# --- HELPER: EXPORT GENERATOR ---
+def update_exports():
+    """Generates the PDF and PPTX and saves them to session state."""
+    if st.session_state.get('scenario_obj'):
+        try:
+            st.session_state['pdf_bytes'] = create_pdf(
+                st.session_state['client_inputs'], 
+                st.session_state['scenario_obj'], 
+                st.session_state['recs'], 
+                st.session_state['mdr_case']
+            )
+        except Exception as e:
+            st.error(f"PDF Generation Failed: {e}")
+            st.session_state['pdf_bytes'] = None
+            
+        try:
+            st.session_state['pptx_bytes'] = create_pptx(
+                st.session_state['client_inputs'], 
+                st.session_state['scenario_obj'], 
+                st.session_state['recs'], 
+                st.session_state['mdr_case']
+            )
+        except Exception as e:
+            st.error(f"PowerPoint Generation Failed: {e}")
+            st.session_state['pptx_bytes'] = None
+
 
 # --- STREAMLIT FRONTEND ---
 st.set_page_config(page_title="MDR & Testing Scenario Generator", page_icon="🛡️", layout="wide")
@@ -189,26 +212,29 @@ if generate_btn:
         "in_house_team": in_house_team, "physical_locations": physical_locations, "public_web_apps": public_web_apps
     }
     
+    selected_vector = random.choice(ATTACK_VECTORS)
+    osint_list = [
+        app_engine.fetch_osint(endpoint),
+        app_engine.fetch_osint(firewall),
+        app_engine.fetch_osint(identity),
+        app_engine.fetch_osint(email),
+        app_engine.fetch_osint(cloud_env)
+    ]
+    osint_data = " ".join([x for x in osint_list if x])
+
+    # Save to session state for potential regenerations later
     st.session_state['client_inputs'] = client_inputs
     st.session_state['customer_name'] = customer_name
-    
-    selected_vector = random.choice(ATTACK_VECTORS)
+    st.session_state['selected_vector'] = selected_vector
+    st.session_state['osint_data'] = osint_data
+    st.session_state['custom_scenario'] = custom_scenario
     
     with st.spinner("Analyzing estate and generating structured narrative with Azure OpenAI GPT-4o..."):
-        osint_list = [
-            app_engine.fetch_osint(endpoint),
-            app_engine.fetch_osint(firewall),
-            app_engine.fetch_osint(identity),
-            app_engine.fetch_osint(email),
-            app_engine.fetch_osint(cloud_env)
-        ]
-        osint_data = " ".join([x for x in osint_list if x])
-        
         # 1. Generate Structured Narrative & Timeline
         narrative_prompt = build_scenario_prompt(client_inputs, osint_data, selected_vector, custom_scenario)
         scenario_obj = app_engine.call_llm_structured(narrative_prompt, ScenarioReport)
         
-        # 2. Generate Standard Text Log (Passing only the narrative string)
+        # 2. Generate Standard Text Log
         if scenario_obj:
             case_prompt = build_mdr_case_prompt(client_inputs, scenario_obj.narrative)
             mdr_case = app_engine.call_llm_text(case_prompt)
@@ -221,18 +247,8 @@ if generate_btn:
         st.session_state['mdr_case'] = mdr_case
         st.session_state['recs'] = recs
         
-        if scenario_obj:
-            try:
-                st.session_state['pdf_bytes'] = create_pdf(client_inputs, scenario_obj, recs, mdr_case)
-            except Exception as e:
-                st.error(f"PDF Generation Failed: {e}")
-                st.session_state['pdf_bytes'] = None
-                
-            try:
-                st.session_state['pptx_bytes'] = create_pptx(client_inputs, scenario_obj, recs, mdr_case)
-            except Exception as e:
-                st.error(f"PowerPoint Generation Failed: {e}")
-                st.session_state['pptx_bytes'] = None
+        # 3. Build Exports via helper function
+        update_exports()
 
     st.success("Analysis Complete!")
 
@@ -252,10 +268,35 @@ if 'scenario_obj' in st.session_state and st.session_state['scenario_obj']:
         for t_event in scenario_obj.timeline:
             st.markdown(f"**{t_event.timestamp}** | {t_event.event_description}")
             
+        st.divider()
+        if st.button("🔄 Regenerate Narrative & Timeline", use_container_width=True):
+            with st.spinner("Regenerating a new narrative path..."):
+                # Pull saved variables from session state
+                n_prompt = build_scenario_prompt(
+                    st.session_state['client_inputs'], 
+                    st.session_state['osint_data'], 
+                    st.session_state['selected_vector'], 
+                    st.session_state['custom_scenario']
+                )
+                new_scenario = app_engine.call_llm_structured(n_prompt, ScenarioReport)
+                if new_scenario:
+                    st.session_state['scenario_obj'] = new_scenario
+                    update_exports()
+                    st.rerun()
+            
     with tab2:
         st.subheader("Simulated MDR Investigation")
         st.info("This output mimics the Case Details view a customer would receive in Sophos Central.")
         st.write(mdr_case)
+        
+        st.divider()
+        if st.button("🔄 Regenerate MDR Log", use_container_width=True):
+            with st.spinner("Regenerating the MDR case log..."):
+                c_prompt = build_mdr_case_prompt(st.session_state['client_inputs'], st.session_state['scenario_obj'].narrative)
+                new_mdr = app_engine.call_llm_text(c_prompt)
+                st.session_state['mdr_case'] = new_mdr
+                update_exports()
+                st.rerun()
         
     with tab3:
         st.subheader("Recommended Security Testing & Advisory")
