@@ -1,11 +1,21 @@
 # app.py
 import streamlit as st
-import re
 import random
+from pydantic import BaseModel, Field
+from typing import List
 from openai import AzureOpenAI
 from data import ATTACK_VECTORS, SIMULATED_OSINT
 from prompts import SYSTEM_PERSONA, build_scenario_prompt, build_mdr_case_prompt
 from export import create_pdf, create_pptx
+
+# --- PYDANTIC DATA MODELS (STRUCTURED OUTPUT) ---
+class TimelineEvent(BaseModel):
+    timestamp: str = Field(description="The timestamp of the event, e.g., '02:00 UTC' or 'Day 1 - 08:00'")
+    event_description: str = Field(description="A detailed description of the attack progression or MDR intervention.")
+
+class ScenarioReport(BaseModel):
+    narrative: str = Field(description="Sections 1 through 4: The full, highly technical threat narrative and MDR response formatted in Markdown.")
+    timeline: List[TimelineEvent] = Field(description="Section 5: The chronological attack timeline.")
 
 # --- BACKEND LOGIC ---
 class CyberScenarioGenerator:
@@ -79,10 +89,28 @@ class CyberScenarioGenerator:
 
         return recs
 
-    def call_llm(self, prompt):
-        if not self.client:
-            return "⚠️ Error: Please enter valid Azure OpenAI credentials in secrets.toml."
-        
+    # Native Structured JSON API Call
+    def call_llm_structured(self, prompt, response_model):
+        if not self.client: return None
+        try:
+            response = self.client.beta.chat.completions.parse(
+                model=self.deployment,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PERSONA},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format=response_model,
+                temperature=0.7
+            )
+            # Returns a strongly typed Python object based on Pydantic model
+            return response.choices[0].message.parsed
+        except Exception as e:
+            st.error(f"Azure OpenAI Parsing Error: {e}")
+            return None
+
+    # Standard Text API Call (used for the MDR log)
+    def call_llm_text(self, prompt):
+        if not self.client: return "⚠️ Error: Please enter valid Azure OpenAI credentials."
         try:
             response = self.client.chat.completions.create(
                 model=self.deployment,
@@ -94,7 +122,7 @@ class CyberScenarioGenerator:
             )
             return response.choices[0].message.content
         except Exception as e:
-            return f"⚠️ An error occurred while communicating with Azure OpenAI: {e}"
+            return f"⚠️ An error occurred: {e}"
 
 # --- STREAMLIT FRONTEND ---
 st.set_page_config(page_title="MDR & Testing Scenario Generator", page_icon="🛡️", layout="wide")
@@ -166,7 +194,7 @@ if generate_btn:
     
     selected_vector = random.choice(ATTACK_VECTORS)
     
-    with st.spinner("Analyzing estate and generating narrative with Azure OpenAI GPT-4o..."):
+    with st.spinner("Analyzing estate and generating structured narrative with Azure OpenAI GPT-4o..."):
         osint_list = [
             app_engine.fetch_osint(endpoint),
             app_engine.fetch_osint(firewall),
@@ -176,53 +204,54 @@ if generate_btn:
         ]
         osint_data = " ".join([x for x in osint_list if x])
         
+        # 1. Generate Structured Narrative & Timeline
         narrative_prompt = build_scenario_prompt(client_inputs, osint_data, selected_vector, custom_scenario)
-        scenario = app_engine.call_llm(narrative_prompt)
+        scenario_obj = app_engine.call_llm_structured(narrative_prompt, ScenarioReport)
         
-        case_prompt = build_mdr_case_prompt(client_inputs, scenario)
-        mdr_case = app_engine.call_llm(case_prompt)
+        # 2. Generate Standard Text Log (Passing only the narrative string)
+        if scenario_obj:
+            case_prompt = build_mdr_case_prompt(client_inputs, scenario_obj.narrative)
+            mdr_case = app_engine.call_llm_text(case_prompt)
+        else:
+            mdr_case = "Generation failed."
         
         recs = app_engine.generate_recommendations(client_inputs)
         
-        st.session_state['scenario'] = scenario
+        st.session_state['scenario_obj'] = scenario_obj
         st.session_state['mdr_case'] = mdr_case
         st.session_state['recs'] = recs
         
-        # NEW: Try/Except blocks to isolate export crashes
-        if "⚠️ Error" not in scenario and "⚠️ An error" not in scenario:
+        if scenario_obj:
             try:
-                st.session_state['pdf_bytes'] = create_pdf(client_inputs, scenario, recs, mdr_case)
+                st.session_state['pdf_bytes'] = create_pdf(client_inputs, scenario_obj, recs, mdr_case)
             except Exception as e:
                 st.error(f"PDF Generation Failed: {e}")
                 st.session_state['pdf_bytes'] = None
                 
             try:
-                st.session_state['pptx_bytes'] = create_pptx(client_inputs, scenario, recs, mdr_case)
+                st.session_state['pptx_bytes'] = create_pptx(client_inputs, scenario_obj, recs, mdr_case)
             except Exception as e:
                 st.error(f"PowerPoint Generation Failed: {e}")
                 st.session_state['pptx_bytes'] = None
-        else:
-            st.session_state['pdf_bytes'] = None
-            st.session_state['pptx_bytes'] = None
-            
+
     st.success("Analysis Complete!")
 
 # --- UI RENDERING ---
-if 'scenario' in st.session_state:
-    scenario = st.session_state['scenario']
+if 'scenario_obj' in st.session_state and st.session_state['scenario_obj']:
+    scenario_obj = st.session_state['scenario_obj']
     mdr_case = st.session_state['mdr_case']
     recs = st.session_state['recs']
     cached_customer_name = st.session_state['customer_name']
-    
-    ui_scenario = re.sub(r'\[TIMELINE_START\]', '\n#### Attack Timeline\n', scenario)
-    ui_scenario = re.sub(r'\[TIMELINE_END\]', '', ui_scenario)
     
     tab1, tab2, tab3 = st.tabs(["📝 Threat Narrative", "🛡️ Sophos Central MDR Log", "🎯 Recommendations"])
     
     with tab1:
         st.subheader(f"Threat Narrative & Solutions for {cached_customer_name}")
-        st.write(ui_scenario)
-        
+        st.write(scenario_obj.narrative)
+        st.markdown("#### Attack Timeline & Early MDR Intervention")
+        for t_event in scenario_obj.timeline:
+            st.markdown(f"**{t_event.timestamp}** | {t_event.event_description}")
+            
     with tab2:
         st.subheader("Simulated MDR Investigation")
         st.info("This output mimics the Case Details view a customer would receive in Sophos Central.")
@@ -238,7 +267,7 @@ if 'scenario' in st.session_state:
         
     st.divider()
     
-    # NEW: Show buttons independently using 'or' instead of 'and'
+    # Show buttons independently using 'or' instead of 'and'
     if st.session_state.get('pdf_bytes') or st.session_state.get('pptx_bytes'):
         st.subheader("📥 Export Client Deliverables")
         dl_col1, dl_col2 = st.columns(2)

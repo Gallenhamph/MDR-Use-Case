@@ -38,7 +38,7 @@ class ReportPDF(FPDF):
         self.set_y(6)
         self.set_font('helvetica', 'B', 12)
         self.set_text_color(255, 255, 255)
-        # ADDED: new_x="RMARGIN", new_y="TOP" to suppress warnings
+        # Suppress FPDF v2.8.7 deprecation warnings
         self.cell(0, 10, 'Threat Modeling & MDR Assessment', align='R', new_x="RMARGIN", new_y="TOP")
         self.set_y(25)
         self.set_text_color(0, 0, 0)
@@ -47,7 +47,7 @@ class ReportPDF(FPDF):
         self.set_y(-15)
         self.set_font('helvetica', 'I', 8)
         self.set_text_color(128, 128, 128)
-        # ADDED: new_x="RMARGIN", new_y="TOP" to suppress warnings
+        # Suppress FPDF v2.8.7 deprecation warnings
         self.cell(0, 10, f'Page {self.page_no()}', align='C', new_x="RMARGIN", new_y="TOP")
 
 def draw_section_header(pdf, title):
@@ -71,15 +71,12 @@ def robust_multi_cell(pdf, w, h, txt, align="L", fill=False):
         for line in lines:
             pdf.cell(w=w, h=h, txt=line, align=align, fill=fill, new_x="LMARGIN", new_y="NEXT")
 
-def draw_visual_timeline(pdf, timeline_text):
-    if not timeline_text: return
+def draw_visual_timeline(pdf, timeline_events):
+    if not timeline_events: return
     draw_section_header(pdf, "Attack Timeline & Early MDR Intervention")
-    entries = timeline_text.strip().split('\n')
     
     x_node, x_text = 20, 30
-    for i, entry in enumerate(entries):
-        if not entry.strip() or '|' not in entry: continue
-        timestamp, event = entry.split('|', 1)
+    for i, t_event in enumerate(timeline_events):
         if pdf.get_y() > 250: pdf.add_page()
             
         start_y = pdf.get_y()
@@ -89,31 +86,23 @@ def draw_visual_timeline(pdf, timeline_text):
         pdf.set_x(x_text)
         pdf.set_font("helvetica", "B", 10)
         pdf.set_text_color(0, 32, 96)
-        pdf.cell(w=0, h=6, txt=clean_text(timestamp.strip(), "pdf"), new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(w=0, h=6, txt=clean_text(t_event.timestamp, "pdf"), new_x="LMARGIN", new_y="NEXT")
         
         pdf.set_text_color(0, 0, 0)
         pdf.set_font("helvetica", "", 10)
         pdf.set_x(x_text)
         
         usable_width = 210 - x_text - 15 
-        robust_multi_cell(pdf, usable_width, 5, clean_text(event.strip(), "pdf"))
+        robust_multi_cell(pdf, usable_width, 5, clean_text(t_event.event_description, "pdf"))
             
         end_y = pdf.get_y()
-        if i < len(entries) - 1:
+        if i < len(timeline_events) - 1:
             pdf.set_draw_color(200, 200, 200)
             pdf.set_line_width(0.5)
             pdf.line(x_node, start_y + 6, x_node, end_y + 2)
         pdf.ln(5)
 
-def create_pdf(inputs, scenario, recs, mdr_case):
-    timeline_match = re.search(r'\[TIMELINE_START\](.*?)\[TIMELINE_END\]', scenario, re.DOTALL)
-    if timeline_match:
-        timeline_text = timeline_match.group(1).strip()
-        main_scenario = re.sub(r'\[TIMELINE_START\].*?\[TIMELINE_END\]', '', scenario, flags=re.DOTALL).strip()
-    else:
-        timeline_text = None
-        main_scenario = scenario
-
+def create_pdf(inputs, scenario_obj, recs, mdr_case):
     pdf = ReportPDF()
     pdf.add_page()
     
@@ -145,7 +134,7 @@ def create_pdf(inputs, scenario, recs, mdr_case):
     
     draw_section_header(pdf, "Targeted Threat Narrative & Solutions")
     pdf.set_font("helvetica", "", 10)
-    for paragraph in clean_text(main_scenario, "pdf").split('\n'):
+    for paragraph in clean_text(scenario_obj.narrative, "pdf").split('\n'):
         if paragraph.strip():
             robust_multi_cell(pdf, 0, 6, paragraph)
             pdf.ln(2) 
@@ -153,8 +142,8 @@ def create_pdf(inputs, scenario, recs, mdr_case):
             pdf.ln(2)
     pdf.ln(6)
     
-    if timeline_text:
-        draw_visual_timeline(pdf, timeline_text)
+    if scenario_obj.timeline:
+        draw_visual_timeline(pdf, scenario_obj.timeline)
         pdf.ln(6)
     
     pdf.add_page() 
@@ -185,17 +174,8 @@ def create_pdf(inputs, scenario, recs, mdr_case):
     return bytes(pdf.output())
 
 # --- PPTX ENGINE ---
-def create_pptx(inputs, scenario, recs, mdr_case):
+def create_pptx(inputs, scenario_obj, recs, mdr_case):
     DARK_BLUE = RGBColor(0, 32, 96)
-    
-    timeline_match = re.search(r'\[TIMELINE_START\](.*?)\[TIMELINE_END\]', scenario, re.DOTALL)
-    if timeline_match:
-        timeline_text = timeline_match.group(1).strip()
-        main_scenario = re.sub(r'\[TIMELINE_START\].*?\[TIMELINE_END\]', '', scenario, flags=re.DOTALL).strip()
-    else:
-        timeline_text = None
-        main_scenario = scenario
-
     prs = Presentation()
     
     slide1 = prs.slides.add_slide(prs.slide_layouts[0])
@@ -238,7 +218,7 @@ def create_pptx(inputs, scenario, recs, mdr_case):
     tf3.word_wrap = True 
     tf3.clear()
     
-    paras = [p for p in main_scenario.split('\n') if p.strip()]
+    paras = [p for p in scenario_obj.narrative.split('\n') if p.strip()]
     exec_summary = paras[:2] if len(paras) >= 2 else paras
     for para in exec_summary:
         p = tf3.add_paragraph()
@@ -250,14 +230,10 @@ def create_pptx(inputs, scenario, recs, mdr_case):
     slide4.shapes.title.text = "Attack Timeline & MDR Intervention"
     slide4.shapes.title.text_frame.paragraphs[0].font.color.rgb = DARK_BLUE
 
-    if timeline_text:
-        entries = timeline_text.strip().split('\n')
+    if scenario_obj.timeline:
         x_node, x_text, y_offset, text_width = Inches(0.8), Inches(1.3), Inches(1.8), Inches(8.0)
 
-        for i, entry in enumerate(entries):
-            if '|' not in entry: continue
-            timestamp, event = entry.split('|', 1)
-
+        for i, t_event in enumerate(scenario_obj.timeline):
             node = slide4.shapes.add_shape(MSO_SHAPE.OVAL, x_node, y_offset, Inches(0.2), Inches(0.2))
             node.fill.solid()
             node.fill.fore_color.rgb = DARK_BLUE
@@ -268,24 +244,50 @@ def create_pptx(inputs, scenario, recs, mdr_case):
             tf.word_wrap = True
 
             p1 = tf.paragraphs[0]
-            p1.text = clean_text(timestamp.strip(), "pptx")
+            p1.text = clean_text(t_event.timestamp.strip(), "pptx")
             p1.font.bold = True
             p1.font.color.rgb = DARK_BLUE
             p1.font.size = Pt(12)
 
             p2 = tf.add_paragraph()
-            p2.text = clean_text(event.strip(), "pptx")
+            p2.text = clean_text(t_event.event_description.strip(), "pptx")
             p2.font.size = Pt(12)
 
             line_height = Inches(0.8)
-            if len(event) > 80: line_height = Inches(1.2)
-            if len(event) > 150: line_height = Inches(1.5)
+            if len(t_event.event_description) > 80: line_height = Inches(1.2)
+            if len(t_event.event_description) > 150: line_height = Inches(1.5)
             
             next_y_offset = y_offset + line_height
 
-            if i < len(entries) - 1:
+            if i < len(scenario_obj.timeline) - 1:
                 connector = slide4.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, x_node + Inches(0.1), y_offset + Inches(0.2), x_node + Inches(0.1), next_y_offset)
                 connector.line.color.rgb = RGBColor(150, 150, 150)
             y_offset = next_y_offset
 
     slide5 = prs.slides.add_slide(bullet_slide_layout)
+    slide5.shapes.title.text = "Security Advisory Summary"
+    slide5.shapes.title.text_frame.paragraphs[0].font.color.rgb = DARK_BLUE
+    tf5 = slide5.shapes.placeholders[1].text_frame
+    tf5.word_wrap = True
+    tf5.clear() 
+    
+    for r in recs:
+        if r.startswith("🛡️") or r.startswith("⚙️"):
+            p5 = tf5.add_paragraph()
+            p5.text = clean_text(r, "pptx")
+            p5.font.bold = True
+            p5.font.size = Pt(16)
+            p5.font.color.rgb = DARK_BLUE
+            p5.level = 0
+            p5.space_before = Pt(10)
+        else:
+            match = re.search(r'\[([^\]]+)\]', r)
+            short_name = match.group(1) if match else r.split(':')[0].replace('•', '').strip()
+            p5 = tf5.add_paragraph()
+            p5.text = short_name
+            p5.font.size = Pt(14)
+            p5.level = 1
+            
+    pptx_stream = io.BytesIO()
+    prs.save(pptx_stream)
+    return pptx_stream.getvalue()
