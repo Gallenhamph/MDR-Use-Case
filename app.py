@@ -180,7 +180,29 @@ with st.sidebar:
     
     st.subheader("👥 The Human Element")
     users = st.number_input("Number of Users", min_value=1, value=500)
-    savviness = st.select_slider("User Security Savviness", options=["Low", "Medium", "High"])
+    st.subheader("👥 The Human Element")
+    users = st.number_input("Number of Users", min_value=1, value=500)
+    
+    # NEW: Descriptive Behavioral Tiers
+    savviness_profiles = {
+        "Tier 1: High Risk / Unaware": "Users frequently reuse passwords, ignore browser warnings, and are highly susceptible to basic phishing.",
+        "Tier 2: Basic Compliance": "Users complete mandatory training but easily fall for targeted spear-phishing, urgency tactics, or MFA fatigue.",
+        "Tier 3: Cautious / Conscious": "A strong security culture. Users actively report suspicious emails and question unusual requests.",
+        "Tier 4: Highly Technical (IT/Dev)": "Advanced users. Hard to phish, but high risk for Shadow IT, disabling agents, or leaking API keys to get work done."
+    }
+    
+    savviness_label = st.selectbox(
+        "User Security Culture", 
+        options=list(savviness_profiles.keys()),
+        index=1
+    )
+    # Display the description underneath the dropdown so the user knows exactly what they selected
+    st.caption(f"*{savviness_profiles[savviness_label]}*")
+    
+    # Store the FULL description to feed to the LLM later
+    savviness = f"{savviness_label} - {savviness_profiles[savviness_label]}"
+    
+    in_house_team = st.radio("In-House Security Team?", ["No", "Yes (9-to-5)", "Yes (24/7)"])
     in_house_team = st.radio("In-House Security Team?", ["No", "Yes (9-to-5)", "Yes (24/7)"])
     
     st.subheader("💻 Technology Stack")
