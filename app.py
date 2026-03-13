@@ -38,7 +38,7 @@ class CyberScenarioGenerator:
         recs = []
         recs.append("🛡️ **SECURITY ASSESSMENTS & ADVISORY**")
         
-        if inputs['in_house_team'] == "Yes (24/7)" and inputs['savviness'] in ["Medium", "High"]:
+        if inputs['in_house_team'] == "Yes (24/7)" and "Tier 3" in inputs['savviness'] or "Tier 4" in inputs['savviness']:
              recs.append("• [Secureworks Adversary Exercises (Red Teaming)](https://www.secureworks.com/services/offensive-security): Emulate a sophisticated adversary to stress-test your mature 24/7 SOC and validate detection capabilities across the kill chain.")
              recs.append("• [Secureworks Threat Hunting Assessment](https://www.secureworks.com/services/threat-hunting): Proactively search your environment for undetected threats or persistence mechanisms that may have bypassed your existing defenses.")
         elif inputs['in_house_team'] != "No":
@@ -58,7 +58,7 @@ class CyberScenarioGenerator:
         if "Cloud" in inputs['cloud_env'] or inputs['cloud_env'] in ["AWS", "Microsoft Azure", "GCP"]:
             recs.append(f"• [Sophos Cloud Security Assessment](https://www.sophos.com/en-us/services/cloud-security-posture-management): Audit your {inputs['cloud_env']} environment for misconfigurations, overly permissive IAM roles, and compliance violations.")
 
-        if inputs['savviness'] == "Low":
+        if "Tier 1" in inputs['savviness'] or "Tier 2" in inputs['savviness']:
             recs.append("• [Sophos Phish Threat (Social Engineering Simulation)](https://www.sophos.com/en-us/products/phish-threat): Conduct targeted phishing and social engineering exercises to baseline and improve employee security awareness.")
 
         if "Active Directory" in inputs['identity'] or "Entra ID" in inputs['identity']:
@@ -146,20 +146,19 @@ def update_exports():
             st.error(f"PowerPoint Generation Failed: {e}")
             st.session_state['pptx_bytes'] = None
 
-
 # --- STREAMLIT FRONTEND ---
 st.set_page_config(page_title="MDR & Testing Scenario Generator", page_icon="🛡️", layout="wide")
 st.title("🛡️ MDR & Offensive Security Scenario Generator")
 st.markdown("Generate highly tailored cyberattack scenarios, complete with mock Sophos Central case logs.")
 
-# Fetch Azure Secrets
+# Fetch Azure Secrets (with robust exception handling)
 try:
     az_key = st.secrets["AZURE_OPENAI_API_KEY"]
     az_endpoint = st.secrets["AZURE_OPENAI_ENDPOINT"]
     az_deployment = st.secrets["AZURE_OPENAI_DEPLOYMENT"]
     az_api_version = st.secrets.get("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
-except KeyError:
-    st.error("Missing API Credentials! Check your secrets.toml file.")
+except Exception as e:
+    st.error("⚠️ Missing API Credentials! Please ensure your `.streamlit/secrets.toml` file exists or is mounted to the container.")
     az_key, az_endpoint, az_deployment, az_api_version = None, None, None, None
 
 app_engine = CyberScenarioGenerator(
@@ -179,8 +178,6 @@ with st.sidebar:
     critical_infra = st.text_input("Critical Infrastructure/Crown Jewels", "Patient Records Database")
     
     st.subheader("👥 The Human Element")
-    
-    # Make sure this line only appears ONCE!
     users = st.number_input("Number of Users", min_value=1, value=500)
     
     savviness_profiles = {
@@ -240,7 +237,6 @@ if generate_btn:
     ]
     osint_data = " ".join([x for x in osint_list if x])
 
-    # Save to session state for potential regenerations later
     st.session_state['client_inputs'] = client_inputs
     st.session_state['customer_name'] = customer_name
     st.session_state['selected_vector'] = selected_vector
@@ -289,7 +285,6 @@ if 'scenario_obj' in st.session_state and st.session_state['scenario_obj']:
         st.divider()
         if st.button("🔄 Regenerate Narrative & Timeline", use_container_width=True):
             with st.spinner("Regenerating a new narrative path..."):
-                # Pull saved variables from session state
                 n_prompt = build_scenario_prompt(
                     st.session_state['client_inputs'], 
                     st.session_state['osint_data'], 
@@ -326,7 +321,6 @@ if 'scenario_obj' in st.session_state and st.session_state['scenario_obj']:
         
     st.divider()
     
-    # Show buttons independently using 'or' instead of 'and'
     if st.session_state.get('pdf_bytes') or st.session_state.get('pptx_bytes'):
         st.subheader("📥 Export Client Deliverables")
         dl_col1, dl_col2 = st.columns(2)

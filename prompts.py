@@ -1,7 +1,31 @@
 # prompts.py
+import os
 import datetime
 
-SYSTEM_PERSONA = """
+# --- DYNAMIC CONTEXT INJECTION ---
+CONTEXT_FILE = "context.txt"
+hardcoded_context = ""
+
+# Safely attempt to read the external text file
+if os.path.exists(CONTEXT_FILE):
+    try:
+        with open(CONTEXT_FILE, "r", encoding="utf-8") as f:
+            hardcoded_context = f.read()
+    except Exception as e:
+        print(f"Warning: Could not read {CONTEXT_FILE}: {e}")
+
+# Format the context block only if the file was found and has content
+context_injection = ""
+if hardcoded_context.strip():
+    context_injection = f"""
+BACKGROUND KNOWLEDGE BASE (CRITICAL CONTEXT):
+You must align all generated scenarios, timelines, and response actions with the following foundational document:
+\"\"\"
+{hardcoded_context}
+\"\"\"
+"""
+
+SYSTEM_PERSONA = f"""
 You are a Principal Cybersecurity Architect and Senior Threat Intelligence Analyst. Your role is to analyze a client's IT estate and generate a realistic, high-impact cyberattack narrative that exposes their specific vulnerabilities.
 
 Your tone MUST be strictly objective, clinical, formal, and highly technical. This is an official intelligence report. DO NOT use conversational language, pleasantries, introductory filler, monologues, or first/second-person pronouns (I, you, we). The output must read as a sterile, formal document, not a human talking.
@@ -18,6 +42,7 @@ CORE OBJECTIVES:
 7. Recommend Portfolio Products: Always suggest specific Sophos products mapping directly to the vulnerabilities exploited.
 8. PROTECT THE SOPHOS BRAND: Under NO circumstances should you criticize, blame, or imply that any Sophos product failed. If the client's current stack includes Sophos products, the breach MUST be attributed strictly to extreme human error, a zero-day exploit in a third-party system, or gross administrative misconfiguration.
 9. AUTHORIZED MDR RESPONSE ACTIONS (STRICT GUARDRAIL): When describing Sophos MDR taking action to neutralize a threat, you MUST ONLY use the following officially supported response actions: Isolate hosts, Terminate processes, Delete artifacts, Remove scheduled tasks/startup items, Clean registry, Block files (SHA256), Block websites/IPs/CIDR, Block applications, Run scans, Use Live Terminal, Block/Enable user sign-in, Disconnect M365 sessions, Disable inbox rules, Disable user accounts, and Active Threat Response.
+{context_injection}
 """
 
 def build_scenario_prompt(client_inputs, osint_data, attack_vector, custom_scenario=""):
@@ -28,7 +53,7 @@ def build_scenario_prompt(client_inputs, osint_data, attack_vector, custom_scena
 
     CLIENT ENVIRONMENT:
     - Industry: {client_inputs['industry']}
-    - Total Users: {client_inputs['users']} (Security Savviness: {client_inputs['savviness']})
+    - Total Users: {client_inputs['users']} (Security Culture: {client_inputs['savviness']})
     - Infrastructure: {client_inputs['endpoints']} Endpoints | {client_inputs['servers']} Servers
     - Critical Asset: {client_inputs['critical_infra']}
     - In-House Security Team: {client_inputs['in_house_team']}

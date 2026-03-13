@@ -1,0 +1,571 @@
+MDR Service Operations Overview
+Sophos Managed Detection and Response is a fully managed service delivered by experts who detect and respond to cyberattacks targeting your computers, servers, networks, cloud workloads, email accounts, and more.
+
+When an active incident has been identified and qualified, the Sophos MDR Ops team will investigate and respond in minutes, whether you need full-scale incident response (exclusive to MDR Complete customers) or help making accurate decisions.
+ 
+Table of Contents
+Sophos MDR Service Levels	3
+Scope of Service – MDR Operations	5
+Within Scope	5
+24/7 global coverage and shifts	7
+SOC structure and levels	8
+Typical profiles and skillsets of SOC operators	9
+Hiring and screening of MDR analysts	9
+High-level presentation of Sophos MDR SOC Operations Processes	11
+Continuous monitoring & detection pipeline explained	12
+How analysts work on cases from creation to closure	14
+Case creation and automated triage	14
+Analyst triage	14
+Investigation (OODA framework)	15
+High-level Shift Handover Process in the Sophos MDR SOC	16
+Preparing a case for handover	16
+Peer review and escalation	16
+Customer communication and follow-up	18
+What communication methods are used for different case severities	19
+Threat response in MDR Essentials (and MDR Complete)	20
+Response Capabilities – MDR Essentials AND MDR Complete	20
+MDR Operations Transition to full-scale incident Response	22
+Criteria for NOT Declaring an Investigation an Active Threat	22
+Example Criteria for Declaring an Investigation an Active Threat	22
+Scope of Service – Incident Response	25
+Shared Responsibility	26
+MDR Incident Phases	27
+Triage	27
+Contain	27
+Neutralize	28
+Remediate	28
+Additional Considerations	29
+
+ 
+Sophos MDR Service Levels 
+Both MDR Essentials and MDR Complete provide 24/7 managed detection and response from the Sophos SOC, but they differ mainly in the depth of response and included incident response services.
+•	MDR Complete requires the full Sophos Endpoint agent (complete Endpoint agent with XDR – not just the lightweight XDR sensor).
+•	The agent must be deployed on all in scope endpoints and servers for Sophos to be able to:
+o	collect telemetry,
+o	contain threats (isolation, blocking),
+o	perform full incident response and remediation actions.
+Both MDR Essentials and MDR Complete include:
+•	24/7 expert led threat monitoring and response
+•	Support for non-Sophos security products (wide third-party integrations)
+•	Weekly and monthly reporting
+•	Monthly Sophos MDR ThreatCast intelligence briefing
+•	Sophos Central Health Check
+•	Expert led threat hunting
+•	Threat response: active attacks are detected and stopped/contained
+MDR Complete includes everything in MDR Essentials, plus full-scale incident response as part of the core service:
+•	Direct call-in support during active incidents
+o	Customers can call the SOC directly when facing an active attack.
+•	Root Cause Analysis (RCA)
+o	On customer request, the SOC can perform a formal RCA after significant incidents to understand how the attack happened and how to prevent recurrence. 
+•	Full-scale Incident Response (IR) included
+o	Sophos MDR operations can execute extensive response actions to disrupt, contain, and fully eliminate the adversary – with no hourly limits or extra IR fees.
+o	Requires the full Sophos XDR agent (protection, detection, response) to allow deep remediation actions.
+•	Dedicated Incident Response Lead
+o	For major incidents, a named Incident Response Lead coordinates all technical actions and communication until closure.
+•	Sophos Breach Protection Warranty (MDR Complete only)
+o	MDR Complete includes the Breach Protection Warranty (up to $1M in covered response expenses, subject to terms and conditions.
+
+For MDR Essentials customers, Emergency Incident Response (EIR) is available at an additional cost, either via a Sophos Incident Response Services Retainer or as an ad-hoc engagement without a pre-existing retainer. This enables full incident response execution capabilities in addition to the MDR Essentials service. 
+Scope of Service – MDR Operations
+Within Scope
+•	Endpoints and Servers that have an active MDR license,
+•	The MDR team is responsible for detecting, reporting, and managing the collaboration with the authorized contacts as defined in Sophos Central (at least one primary contact is mandatory and up to three contacts can be configured).
+•	Based on the customers response mode, we will also step in and contain/neutralize the active threat.
+Available response modes are:
+o	Collaborate
+The Collaborate Threat Response Mode sends you notifications of observed activities, and corresponding recommendations. The MDR Ops team will investigate but no response actions will be taken without your consent or active involvement. Selecting Collaborate gives you the option to have some response actions performed by the MDR Ops team and others to be performed by your team or another partner (e.g. an IT managed service provider).
+In this mode, the MDR Ops team must receive written authorization before performing response actions. 
+An option exists under Collaborate that authorizes the MDR Ops Team to operate in Authorize mode in the event Sophos does not receive acknowledgment after attempting to reach all customer defined contacts by phone. If you prefer for us to work this way, please be sure to check the box under Collaborate in Sophos Central.
+o	Authorize
+The Authorize Threat Response Mode also sends you notifications of observed activities, but the MDR Ops team will proactively manage all containment actions (with full neutralization for MDR Complete customers) on your behalf and inform you of the action(s) taken. Selecting Authorize means you want us to handle as much workload as possible, notify you of the response actions taken, and only escalate things that require specific actions from you or your team that we are unable to take. 
+o	Notify Only
+The Notify Only Threat Response Mode only sends you notifications of observed activities. The MDR Ops team can't take action to contain or neutralize threats and can only do limited investigation. We recommend selecting the Collaborate or Authorize in order for the MDR Operations team to be able to carry out threat response actions.
+ 
+Out of Scope
+The following items are not included in the service scope:
+•	Endpoints or servers without an active MDR license
+•	Devices not eligible for an MDR license (e.g. hypervisors). For such systems, we may provide best-practice guidance and best-effort assistance, and they may be included in the incident response process where required
+•	Third-party firewalls: telemetry collection and blocking recommendations are provided; customers are responsible for implementing IP blocks on third-party firewalls. However, our SOC can implement these actions on Sophos firewalls
+•	User Exchange mailboxes (due to privacy considerations)
+•	On-site support (remote support only). On-site assistance is available via an Incident Management retainer or ad-hoc incident response engagement at additional cost
+•	Digital forensics:
+o	Hard drive mirroring or imaging
+o	Chain of custody
+•	eDiscovery services: We will not discover digital information in support of a legal proceeding or investigation.
+•	Legal guidance: We cannot provide any legal guidance into your incident or any potential data loss. Nor be used as an expert witness in a court testimonial.
+•	Crisis management services
+•	Dark web monitoring (available at additional cost with the Sophos ITDR service)
+•	Rebuilding, restoring, or wiping endpoints or servers
+•	Configuration of Active Directory, Exchange, or other critical non-Sophos infrastructure
+•	Implementation of security posture improvements
+ 
+24/7 global coverage and shifts
+•	Sophos MDR is delivered from seven global SOCs (North America, Europe, APAC) operating in a follow-the-sun model.
+•	Analysts work in rotating shifts so that at any time of day or night, a fully staffed team is:
+o	monitoring environments,
+o	triaging new detections,
+o	responding to active threats.
+•	Over 600 analysts and specialists (investigators, threat hunters, detection engineers, and IR experts) collaborate across locations.
+ 
+SOC structure and levels
+
+ 
+While internal titles may vary by location, the SOC is generally structured into the following layers:
+Front-line Analysts (L1 / Triage Analysts)
+•	First to receive new MDR cases.
+•	Validate alerts, apply the severity matrix (Informational / Low / Medium / High / Critical), close noise, and escalate confirmed threats.
+Investigation & Response Analysts (L2)
+•	Conduct deeper investigations on Medium and High cases.
+•	Execute XDR queries, correlate data across tools, and determine containment or neutralization actions.
+•	Often specialize by domain (endpoint, network, cloud/identity, email).
+Senior Analysts, Threat Hunters, and Incident Responders (L3)
+•	Manage complex, multi-stage attacks and High/Critical incidents.
+•	Lead threat hunting campaigns and develop new detections and playbooks.
+•	Provide guidance and peer review to L1/L2 analysts; for MDR Complete or IR customers, often act as Incident Response Leads.
+SOC Leadership & Coordination
+•	SOC managers, shift leads, and service delivery managers oversee staffing, SLAs, incident escalation, and customer communications.
+•	Coordinate with product teams and SophosLabs/X-Ops to drive continuous improvement.
+This layered structure ensures rapid triage while providing deep expertise for serious or complex attacks.
+ Typical profiles and skillsets of SOC operators
+Across these levels, Sophos MDR SOC staff provide customers with access to a multidisciplinary team covering everything from first-line triage to advanced threat research:
+Security Analysts / MDR Analysts
+•	Backgrounds in SOC operations, digital forensics, incident handling, or IT/security operations.
+•	Skills include log analysis, EDR/XDR, MITRE ATT&CK, Windows/Linux internals, network security, and scripting.
+Threat Hunters and Detection Engineers
+•	Specialize in identifying weak signals and developing new detections.
+•	Skills include advanced query languages (XDR / SQL-like), threat intelligence, attacker TTPs, pattern recognition, and automation.
+Incident Responders and DFIR Specialists
+•	Lead complex incidents and full incident response engagements, particularly for MDR Complete and Emergency Incident Response.
+•	Skills include incident command, disk/memory/log forensics, containment and eradication strategies, and communication with executives and legal/compliance teams.
+Supporting Experts (X-Ops / SophosLabs, Data Scientists, Platform Engineers)
+•	Collaborate with MDR teams to provide detection content, machine learning models, enrichment, and tooling.
+Hiring and screening of MDR analysts
+Sophos maintains a formal, multi-step hiring process for MDR SOC staff, including comprehensive background screening. Key components typically include:
+Technical Assessment
+•	Practical evaluation of security skills, including log and event analysis, incident scenarios, and understanding of attack techniques.
+Soft Skills and Communication Assessment
+•	Evaluation of the ability to communicate clearly with customers under pressure, such as during active incidents.
+Background Checks
+•	Employment verification and region-specific background screening, conducted in accordance with local regulations and internal security policies.
+Ongoing Training and Certification
+•	Analysts receive continuous training on emerging threats, tools, and internal playbooks, and are encouraged to maintain relevant certifications.
+The process ensures that MDR analysts are trusted, vetted professionals capable of handling sensitive customer data and responding effectively to high-impact incidents.
+
+ 
+High-level presentation of Sophos MDR SOC Operations Processes
+
+ 
+
+The MDR detection pipeline consists of the following stages, applied to both endpoints and integrations:
+Ingest & Filter → Clean → Enrich → Correlate → Prioritize → Case Creation
+When correlated activity aligns with a potentially malicious pattern, an MDR case is created. At this stage, the case reflects a suspected threat, which could be:
+•	Benign activity or a false positive,
+•	Early-stage attacker behavior (such as initial access, reconnaissance, or pre-execution activity).
+Each case is then reviewed by an MDR analyst, who validates the detection and determines the appropriate outcome:
+•	False positive / informational → case is closed with documentation,
+•	Benign but security-relevant activity → may result in tuning or recommendations shared with the customer,
+•	Confirmed malicious activity (true positive) → escalated to a full investigation process.
+Continuous monitoring & detection pipeline explained
+Every day, for all customers, the SOC performs the following activities:
+1.	Ingest & Filter
+Telemetry from endpoints, firewalls, cloud workloads, email, identity providers, and other integrated sources is ingested into the MDR detection pipeline. All telemetry—native endpoint data as well as third-party integrations—is processed through a single, centralized global pipeline, ensuring consistent detection logic across all data sources.
+Telemetry sources include:
+Sophos agents (XDR / Intercept X) on endpoints and servers
+o	Telemetry collected locally on the device, including:
+	Process executions, parent/child relationships, and command-line activity (PowerShell, cmd, scripts),
+	File operations, registry modifications, and persistence mechanisms,
+	Network connections (IP addresses, domains, ports),
+	Anti-exploit events, ransomware protection triggers, credential theft attempts, and similar activity.
+o	Local detections and preventions:
+	The agent blocks and prevents many threats directly on the endpoint (malware, exploits, ransomware).
+	These local events are forwarded as telemetry and become detections entering the MDR pipeline.
+Firewalls, email, identity, cloud, network tools, and supported third-party products
+o	Telemetry sources may include (non-exhaustive):
+	Firewalls / Proxies: Palo Alto, Cisco Meraki, Fortinet, Check Point, Sophos Firewall, etc.
+	Email: Microsoft 365 and other secure email gateways.
+	Identity: Entra ID / Azure AD, Okta, and others.
+	Cloud: AWS, Azure, and GCP security logs.
+	Network / NDR: Sophos NDR, Darktrace, etc.
+	Other tools: via API or log collector.
+Integration methods:
+•	API-based integrations (e.g., Microsoft Graph, Okta, various SaaS tools):
+o	MDR pulls alerts and events via REST APIs.
+•	Log collector / syslog (e.g., firewalls, certain SIEM feeds):
+o	Logs are sent to a Sophos log collector Virtual Machine and then forwarded to the data lake.
+•	Sophos products (e.g., Sophos NDR, Sophos Firewall):
+o	Native, direct telemetry ingestion into Sophos Central and the data lake.
+2.	Clean
+Obvious noise and data that is not security-relevant are discarded.
+
+3.	Enrich
+Threat intelligence (SophosLabs Intelix, OSINT), geolocation, asset criticality, user context, and other relevant information are added.
+Examples by product type:
+•	Firewall integration (e.g., Cisco Meraki)
+o	Clean: Normalize fields such as source/destination IPs, ports, and action (blocked/allowed).
+o	Map: Correlate exploit alerts to the MITRE ATT&CK framework.
+o	Enrich: Add geolocation, IP reputation, and asset tags (internal vs. external, DMZ, etc.).
+•	Microsoft / Email / Identity integrations
+o	Clean: Normalize user IDs, tenant information, and event types.
+o	Enrich:
+	Determine if the account has high privileges.
+	Check whether the login location or device is unusual.
+	Identify any associated endpoints or NDR events.
+
+4.	Prioritize
+Score event clusters by risk and impact to determine which require analyst attention first.
+
+5.	Escalate / Create Cases
+Promote high-risk clusters into MDR cases for human investigation, applying the severity matrix.
+
+
+ 
+How analysts work on cases from creation to closure 
+
+Analysts follow a structured, repeatable workflow for every MDR case. 
+Case creation and automated triage
+Detection → Case
+•	Telemetry from endpoints, firewalls, cloud, email, identity, and other sources flows through the MDR detection pipeline: ingest → clean → enrich → correlate → prioritize.
+•	When a pattern meets the risk threshold, the system generates an MDR case in the MDR platform.
+•	Detection data is enriched with:
+o	Intelix threat intelligence
+o	MITRE ATT&CK mapping
+o	IP geolocation and additional contextual information
+Automated Pre-Processing
+•	Newly created cases undergo automated triage:
+o	Duplicate checks (same host, IOC, or time window)
+o	Risk evaluation based on detection rules and enrichment
+•	Non-actionable or purely informational items may be closed automatically or routed differently; cases requiring action are queued for analyst review.
+Analyst triage
+Case Handling Workflow in the Analyst Queue
+1.	Pick up the case
+o	The MDR analyst assigns the case to themselves and sets the status to Triage.
+2.	Perform initial review
+o	Examine detection details.
+o	Identify affected hosts, users, and IPs.
+o	Review the timeline and related events.
+o	Consider existing customer context, including system criticality and known constraints.
+3.	Make a quick decision
+o	Determine whether the case is likely noise or requires further investigation.
+o	Use experience, enrichment data, and tuning to classify the case as:
+	Clearly benign / false positive, or
+	Requiring deeper investigation
+4.	Assign initial severity
+o	Apply the MDR severity matrix: Informational / Low / Medium / High / Critical.
+o	Use severity to guide urgency and communication method: console only, email, or phone + email for High/Critical cases.
+
+Investigation (OODA framework)
+ 
+For cases that are not immediately dismissed, analysts move into full investigation. The current workflow explicitly references an OODA style framework (Observe → Orient → Decide → Act):
+1.	Observe
+o	Collect relevant data:
+	process trees,
+	network flows,
+	user and authentication events,
+	email events, firewall logs, cloud logs, etc.
+o	Use XDR queries and data lake searches to extend the timeline and scope.
+2.	Orient
+o	Put the activity into context:
+	Is this host critical (e.g. DC, database, finance)?
+	Is the user privileged or service account?
+	Is this pattern common or rare for this environment?
+o	Map to MITRE ATT&CK to understand where in the kill chain this sits.
+3.	Decide
+o	Classify the case as:
+	Benign / false positive,
+	Contained / low impact threat, or
+	Emerging attack / active adversary.
+o	If evidence of a real attacker or compromise appears, severity is escalated to High or Critical, and if needed, incident management is invoked (esp. for MDR Complete).
+4.	Act
+o	Take (or recommend) response actions: Identify → Contain → Neutralize → Remediate.
+o	Examples from real threat case examples:
+	block malicious IPs/domains,
+	isolate or clean affected endpoints,
+	advise the customer to remove phishing emails at scale, enable MFA, etc.
+High-level Shift Handover Process in the Sophos MDR SOC
+Sophos MDR operates on a 24/7 follow-the-sun model. To ensure continuity of investigations and incidents across time zones, a structured, case-centric handover process is used.
+A handover occurs when:
+•	An analyst’s shift ends while active cases are still in progress, 
+or
+•	A case must be transferred to another team (for example, a different region or a specialist team) due to capacity or expertise requirements.
+The objective is to allow the next analyst to continue the investigation seamlessly, without restarting the analysis from scratch.
+Preparing a case for handover
+Before the end of a shift, the current analyst:
+1.	Updates the case record in the MDR case management platform:
+o	Current status (e.g. In Progress, Sophos Response Pending, Customer Action Required).
+o	Verdict or working hypothesis to date (e.g. suspected malware, credential theft, reconnaissance).
+o	Severity level (Informational, Low, Medium, High, Critical) based on the MDR severity matrix.
+o	Key evidence and actions already performed (artifacts identified, logs reviewed, queries executed).
+2.	Documents next steps:
+o	Outstanding tasks (e.g. “run XDR queries on remaining servers”, “await customer confirmation to isolate the host”).
+o	Any time-sensitive items (e.g. monitoring for reinfection, tracking specific IPs or domains).
+3.	Records customer interactions:
+o	Whether the customer has been notified and through which channel (portal, email, phone).
+o	Whether customer action is required and what the investigation is currently waiting on.
+Peer review and escalation
+MDR Case Peer Review and Escalation Workflow
+1.	Submit for peer review
+o	If an analyst is uncertain about the case classification or response, they post it to a senior analyst or specialist for review.
+2.	Escalate High/Critical or complex cases
+o	Escalate the case to incident management as needed.
+o	For MDR Complete or Emergency Incident Response (EIR) services, assign an Incident Response Lead to manage the case.
+
+ 
+Customer communication and follow-up
+During the Investigation and at Case Closure
+During the Case
+•	For higher-severity cases, analysts provide updates and recommendations via email and phone.
+•	If the customer must take action, the system can send up to three automated follow-ups if no response is received.
+At Resolution
+•	The analyst documents:
+o	What happened
+o	What was investigated
+o	Actions taken by Sophos
+o	Actions recommended to or required from the customer
+•	The case is then moved to Resolution and subsequently to Case Closure.
+If Incident Management Was Invoked (High/Critical incident for MDR Complete / EIR)
+•	Additional post-incident activities may include:
+o	Root cause analysis
+o	Final report (upon request)
+o	Recommendations for system hardening
+ 
+What communication methods are used for different case severities
+
+Severity	License	Response Mode	Communication	Response Actions
+Critical	MDR-C	Authorize	Phone + email
+All 3 MDR contacts receive email
+Extensive outreach via CSM, AM, TAM, or support	Take Response Action and inform customer, Initiate full incident response
+	MDR-C	Collaborate + Authorize	Phone + email
+All 3 MDR contacts receive email
+Extensive outreach via CSM, AM, TAM, or support	SOC analyst calls
+If no answer, take response actions
+Initiate full incident response
+	MDR-C	Collaborate	Phone + email
+All 3 MDR contacts receive email
+Extensive outreach via CSM, AM, TAM, or support	Wait for customer to confirm before taking any response actions
+Initiate full incident response
+	MDR-E	Authorize	Phone + email
+All 3 MDR contacts receive email
+Extensive outreach via CSM, AM, TAM, or support	Take Response Action and inform customer
+Refers the customer to the EIR service
+	MDR-E	Collaborate + Authorize	Phone + email
+All 3 MDR contacts receive email
+Extensive outreach via CSM, AM, TAM, or support	SOC analyst calls
+If no answer, take response actions
+Refers the customer to the EIR service
+	MDR-E	Collaborate	Phone + email; all 3 MDR contacts receive email; extensive outreach via CSM, AM, TAM, or support	Wait for customer to confirm before taking any response actions
+Refers the customer to the EIR service
+High	MDR-C / MDR-E	Authorize	All 3 MDR contacts receive email
+Calls at discretion	Analyst will take action if required
+	MDR-C / MDR-E	Collaborate + Authorize	All 3 MDR contacts receive email
+May call each contact to confirm activity and response action	If no answer to email/call, take response actions if required
+	MDR-C / MDR-E	Collaborate	All 3 MDR contacts receive email; calls at discretion
+May call each contact to confirm activity and response action	Wait for customer to confirm before taking response actions, if required
+Medium / Low / Informational	MDR-C / MDR-E	—	All 3 MDR contacts receive email
+Calls highly unlikely	N/A
+
+
+Threat response in MDR Essentials (and MDR Complete)
+With MDR Essentials, hands-on action is taken, but the scope is limited to Threat Response rather than full Incident Response.
+•	Both MDR Essentials and MDR Complete operate using the same four-stage response model:
+Identify → Contain → Neutralize → Remediate.
+•	The distinction lies in the depth of response. MDR Essentials concentrates on Threat Response, which focuses on stopping active threats and preventing spread. 
+•	Full, end-to-end Incident Response—including deep DFIR activities, structured root cause analysis, and ownership of comprehensive remediation—is included with MDR Complete or delivered through a separate Incident Response retainer or Emergency Incident Response service (EIR).
+Response Capabilities – MDR Essentials AND MDR Complete
+With both MDR Essentials and MDR Complete, the Sophos SOC provides the following response actions:
+Identify (Sophos SOC)
+•	Analyze where and how the threat is occurring, including:
+o	affected users, devices, servers, workloads, and accounts
+o	timeline and scope of malicious activity
+•	Leverage XDR Live Queries to collect additional context such as:
+o	process trees
+o	network connections
+o	persistence mechanisms
+Recommend (Customer Actions)
+•	Advise on enabling additional telemetry or security settings to improve visibility where required
+(e.g., ensuring XDR coverage across all in-scope assets).
+Contain (Sophos SOC, where technically feasible)
+•	Isolate compromised endpoints or servers from the network using the Sophos agent.
+•	Terminate malicious processes on affected endpoints.
+•	Block known malicious indicators, including:
+o	file hashes
+o	IP addresses, domains, and URLs
+o	malicious services or scheduled tasks, where supported by the tooling.
+Recommend (Customer Actions)
+•	Provide guidance for response actions on customer-managed technologies not directly controlled by Sophos
+(e.g., certain firewalls, IAM platforms, or line-of-business applications).
+Neutralize (Sophos SOC)
+•	Remove malware and clearly identified attacker tools from impacted systems using Sophos capabilities.
+•	Disable or remove malicious persistence mechanisms that are manageable via Sophos Central.
+Recommend (Customer Actions)
+•	Suggest additional remediation or configuration changes on systems outside full Sophos control
+(e.g., custom applications or specific third-party platforms).
+•	Recommend security hardening and follow-up actions, such as:
+o	closing unnecessary network ports
+o	enforcing strong password policies and MFA
+o	restricting internet access for sensitive servers
+o	patching vulnerable services
+•	When appropriate, start end-to-end Incident Response (MDR-C) or advise engaging Emergency Incident Response (EIR) services for advanced or specialized threats (MDR-E).
+Confirm (Sophos SOC)
+•	Validate that Sophos-managed endpoints are configured according to recommended security posture
+(e.g., correct policies applied, no unsafe exclusions).
+•	Confirm that no active threat remains within the scope of Sophos visibility and control.
+Note:
+Deep root cause analysis and formal RCA reporting are not included by default with MDR Essentials. These capabilities are delivered as part of MDR Complete or through Incident Response (IR/EIR) services.
+ 
+MDR Operations Transition to full-scale incident Response
+Criteria for NOT Declaring an Investigation an Active Threat
+•	The MDR Team identifies activity that does not present an immediate risk to the organization
+•	The MDR Team identifies a Potentially Unwanted Application or Program PUA/PUP without evidence of malicious intent
+•	The MDR Team identifies administrative or privileged activity with no additional suspicious behavior associated with it
+•	The MDR Team observes a single isolated suspicious event with no correlated activity or indicators of compromise
+The MDR Team’s responsibility is to determine whether observed activity is legitimate or indicative of threat actor behavior
+Example Criteria for Declaring an Investigation an Active Threat
+•	The MDR Team observes suspicious code execution resulting from exploitation of a web server or application 
+•	e.g. SolarWinds ProxyShell Confluence
+•	The MDR Team observes attempts to access or obtain authentication material 
+•	e.g. credential dumping techniques
+•	The MDR Team observes defense evasion activity intended to impair disable or bypass Sophos security controls 
+•	e.g. stopping or disabling Sophos services
+•	The MDR Team observes lateral movement using privileged accounts to perform follow-on actions 
+•	e.g. Impacket activity or suspicious remote logins from unmanaged IP addresses
+•	The MDR Team observes persistent or uninterrupted command-and-control communications 
+•	e.g. undetected Cobalt Strike or unexpected remote access trojans
+•	The MDR Team observes data collection staging or exfiltration attempts 
+•	e.g. creation of archive files or file transfers to external hosting services
+•	The MDR Team observes attempts to encrypt delete or otherwise destroy data or systems 
+•	e.g. ransomware activity or destructive file/system deletion
+
+
+ 
+
+The MDR severity matrix is based on the analyst’s assessment of the case, considering how far the attacker has progressed, what they are currently doing, and the potential impact on the customer’s assets. 
+Escalation to each severity level is triggered as follows:
+•	INFORMATIONAL
+•	Trigger: Detections that have been triaged and analyzed but do not indicate poor system health, malicious activity, or confirmed compromise or unauthorized access.
+•	Example: 
+•	Benign administrative script
+•	routine software update
+•	health check signal.
+•	LOW
+•	Trigger: Misconfigurations or weak settings, primarily in Sophos Central endpoint or server policies.
+•	Example: 
+•	Disabled protection feature
+•	overly permissive policy
+•	outdated configuration.
+•	These are considered security hygiene issues rather than active attacks.
+•	MEDIUM
+•	Trigger: Detections or preventions that may not be malicious on their own and are not known to be targeted but are suspicious enough to warrant investigation and sometimes response.
+•	Examples: 
+•	Unusual PowerShell or scripting activity
+•	single failed exploit attempt blocked,
+•	suspicious login patterns without clear attacker behavior.
+•	HIGH
+•	Trigger: Evidence of a targeted attack with realistic potential to cause confirmed compromise or unauthorized access that could threaten customer assets.
+•	Examples of patterns that escalate a case to High: 
+•	Multiple steps of an attack chain observed (initial access, persistence, lateral movement)
+•	use of sophisticated tools or techniques typical of human-operated attacks
+•	partial prevention where some detections were blocked but indicators suggest the attacker may still have a foothold.
+•	CRITICAL
+•	Trigger: Confirmed compromise or unauthorized access posing an imminent threat to customer assets. This includes interactive attackers in the environment, active data encryption or destruction (e.g., ransomware in progress), and data exfiltration or theft.
+•	Critical is applied when the SOC has sufficient evidence that the attacker has gained access and is causing immediate or ongoing impact on systems or data.
+ 
+Scope of Service – Incident Response 
+When a case (threat) is classified as High or Critical, several things happen:
+1.	Escalation and communication intensify
+o	The SOC follows the established communication matrix, including:
+	Real-time notifications via the console
+	Phone calls and email notifications to designated contacts for High/Critical incidents
+	For MDR Complete or EIR services, assignment of a dedicated Incident Response Lead
+2.	Scope and response expand
+o	The same core response phases apply (Identify → Contain → Neutralize → Remediate), but with:
+	Broader scoping across multiple systems (including 3rd party systems), accounts, and data flows
+	Involvement of additional stakeholders (IT teams, management, and potentially legal/compliance)
+	For MDR Complete or EIR, activation of the formal Incident Response lifecycle, as defined in IR templates and the Emergency Incident Response Statement of Work
+3.	Post-incident activities
+o	For full incidents—especially Critical ones—the process includes:
+	Root Cause Analysis
+	Security recommendations and environment hardening
+	Internal updates to Sophos detection rules and playbooks to enable earlier detection of similar threats in the future
+
+ 
+ 
+Shared Responsibility
+•	Sophos MDR supports customers across the entire incident analysis lifecycle.
+•	This includes in-depth triage and investigation to assess scope and impact.
+•	Analysis covers compromised devices and users, indicators of compromise, malware behavior, and related artifacts.
+•	Containment actions may include device isolation, blocking malicious indicators, and removal of persistence mechanisms.
+•	When certain response actions cannot be performed directly by MDR, clear, guided recommendations are provided to enable the customer to take action.
+
+  
+MDR Incident Phases
+Triage
+ 
+
+During this phase, the primary objective of the MDR Operations Team is to identify all assets impacted by the active threat.
+•	Commonly affected items include:
+o	Hosts
+o	User accounts
+•	To achieve this, MDR leverages multiple data collection and analysis techniques, including:
+o	Live Query and Data Lake queries
+o	Live Response investigations
+o	Log analysis
+o	Review and collection of Indicators of Compromise (IOCs)
+•	Findings are used to:
+o	Improve detection and prevention capabilities
+o	Build a clear attack narrative outlining the threat’s progression and impact
+Contain
+ 
+
+The primary objective of the MDR Operations Team at this stage is to identify the tools leveraged by the threat actor and disrupt the spread of the active threat.
+•	Commonly observed tools include:
+o	PowerShell one-liners
+o	Command-and-Control (C2) beacons
+o	Malicious files
+o	Persistence mechanisms
+•	Typical disruption actions performed by the customer include:
+o	Resetting compromised user passwords
+o	Blocking C2 infrastructure
+•	When the customer is in Authorize mode, Sophos MDR may directly execute disruption actions such as:
+o	Isolating affected hosts
+o	Removing identified persistence mechanisms
+o	Disabling user accounts (when MDR has access to the Domain Controller)
+o	Terminating malicious processes
+Neutralize
+ 
+
+The primary objective of the MDR Team at this stage is to continuously monitor the customer’s environment to ensure full coverage of the Triage and Containment phases.
+•	Common monitoring approaches include:
+o	Ongoing execution of incident-related tasks and threat-hunting trailheads
+o	Verification that detection and prevention improvements have been fully implemented and are effective
+Remediate
+
+ 
+The primary objective of the MDR Operations Team at this stage is to help restore normal operations across the customer’s environment and to recommend security posture improvements that reduce the risk of future active threats.
+•	Typical security posture improvement recommendations include:
+o	Closing unnecessary network ports on hosts
+o	Enforcing strong password policies
+o	Implementing multi-factor authentication (MFA)
+o	Restricting internet access on servers
+o	Patching vulnerable or outdated services
+Note: While the MDR Team does not directly implement security posture improvements, it provides clear, actionable recommendations to help prevent future incidents.
+
+Additional Considerations
+•	Identification of ‘patient zero’, determining if data was exfiltrated, and confirming whether the attacker still has access
+Answering these critical aspects is a top priority during an investigation. MDR aims to determine the origin of the attack (“patient zero”), whether sensitive data was exfiltrated, and whether the attacker still maintains access. However, the ability to provide definitive answers depends on the evidence available and may not always be possible.
+•	Ransomware decryption and coordination with external parties, including law enforcement and DFIR services
+Sophos MDR does not decrypt ransomware-affected data. The team will, however, check for publicly available decryption tools. With customer consent, MDR can collaborate with external parties, including law enforcement, third-party agencies (such as cyber insurance providers or legal counsel), DFIR services via a Sophos partner, or another vendor selected by the customer.
+•	Training on proper management of EDR and XDR tools
+Although MDR does not provide direct training, Sophos offers resources to help customers and partners effectively leverage EDR/XDR tools included in their licensing. MDR customers also have direct access to request ad-hoc threat hunts or searches. For deeper guidance, Professional Services for Guided Onboarding are recommended, with some SKUs including threat hunting training.
+•	Phone number used by the SOC when contacting customers for active incidents or completed threat investigations
+When contacting a customer regarding an active incident or a completed threat investigation, MDR analysts will use the nearest number from the published SOC phone list, available in Sophos Central Admin. This ensures timely and consistent communication while allowing the customer to recognize the call as coming from the Sophos MDR team.
+•	Clarification of what the MDR team has access to and when they can access it
+While MDR tools technically allow access to endpoints and servers, analysts only query the data necessary to investigate threats. Investigations follow an iterative methodology: identifying suspicious indicators, forming hypotheses, and testing them. Accessing sensitive information occurs only when absolutely required during active investigations. Metadata, such as file access times or execution context, often provides sufficient insight without reviewing file contents. Remote shell actions (Live Response) are executed only if required to neutralize a threat and always require customer authorization plus SOC team lead approval.
+•	How customers can audit or review every action a Sophos engineer takes while remoted into their computers and network
+All actions performed via Sophos Central on customer environments are fully logged in the Audit Log. This includes queries executed on endpoints and commands run during Live Response sessions, providing complete transparency and auditability.
+•	Number of SOC analysts dedicated to protecting a single customer and how coverage is structured
+MDR operates 24/7 as a global service under a “follow-the-sun” model. Customers do not have dedicated SOC analysts but benefit from access to a global SOC team of over 100 members who collaborate in real time to hunt, investigate, and remediate threats. For MDR Complete customers, a dedicated Incident Response Lead is assigned to manage all active incidents and act as the single point of contact during elevated events.
+•	MDR service uptime and platform reliability
+Sophos Central’s platform architecture and uptime targets are publicly documented in the Sophos Trust Center. Internally, Sophos targets greater than 99.99% uptime for the core administrative and data infrastructure supporting MDR services. Customers can monitor status and receive outage notifications via the Sophos status page.
+•	Sophos MDR service level agreements (SLA), response times, and service credit
+MDR Complete customers are covered by a Service Level Agreement. High Severity cases are targeted to receive a response within 60 minutes for 90% of incidents monthly. If the SLA is missed more than three times within a rolling 12-month period, customers may request a service credit equal to 5% of fees paid during the previous billing cycle or $5,000 USD, whichever is lower. Service credit claims must be submitted in writing within 30 days of eligibility, with a maximum of three claims per year.
+
